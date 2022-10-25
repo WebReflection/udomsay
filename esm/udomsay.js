@@ -126,8 +126,8 @@ const createUpdates = (container, details, updates) => {
               const {parentNode} = node;
               let i = 0, stack = [], keys = {}, nodes = [];
               (updates[index] = (args, hole = getHole(child, length, args)) => {
-                const {length} = stack;
                 const array = [];
+                const newStack = [];
                 let useKeys = false;
                 for (i = 0; i < hole.length; i++) {
                   const value = hole[i];
@@ -137,8 +137,10 @@ const createUpdates = (container, details, updates) => {
                   let info = stack[i] || (stack[i] = new KeyedHoleInfo);
                   if (useKeys && key.value === info.key && __token === info.__token)
                     refresh(info, value);
-                  else if (useKeys && keys[key.value])
-                    refresh(info = (stack[i] = keys[key.value]), value);
+                  else if (useKeys && keys[key.value]) {
+                    info = keys[key.value];
+                    refresh(info, value);
+                  }
                   else {
                     if (useKeys) {
                       info.key = key.value;
@@ -146,15 +148,16 @@ const createUpdates = (container, details, updates) => {
                     }
                     populateInfo(info, __token, value);
                   }
+                  newStack.push(info);
                   array.push(...info.nodes);
                 }
                 if (i) {
+                  const {length} = stack;
                   if (i < length) {
-                    const drop = stack.splice(i);
                     // TODO: dispose?
                     if (useKeys) {
-                      for (const {key} of drop)
-                        delete keys[key];
+                      while (i < length)
+                        delete keys[stack[i++].key];
                     }
                   }
                   nodes = diff(parentNode, nodes, array, diffable, node);
@@ -168,10 +171,10 @@ const createUpdates = (container, details, updates) => {
                     range.setEndAfter(nodes[length - 1]);
                     range.deleteContents();
                     nodes = array;
-                    stack = [];
                     keys = {};
                   }
                 }
+                stack = newStack;
               })(args, value);
             }
             else {
