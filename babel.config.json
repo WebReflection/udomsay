@@ -1,0 +1,5 @@
+{
+  "plugins": [
+    ["@ungap/babel-plugin-transform-hinted-jsx"]
+  ]
+}
