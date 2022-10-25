@@ -134,19 +134,18 @@ const createUpdates = (container, details, updates) => {
               (updates[index] = (args, hole = getHole(child, length, args)) => {
                 const array = [];
                 const newStack = [];
+                const {length} = stack;
                 let useKeys = false;
                 for (i = 0; i < hole.length; i++) {
                   const value = hole[i];
                   const {__token, key} = value.args[1];
                   if (!useKeys && key !== void 0)
                     useKeys = true;
-                  let info = stack[i] || (stack[i] = new KeyedHoleInfo);
+                  let info = i < length ? stack[i] : new KeyedHoleInfo;
                   if (useKeys && key.value === info.key && __token === info.__token)
                     refresh(info, value);
-                  else if (useKeys && keys[key.value]) {
-                    info = keys[key.value];
-                    refresh(info, value);
-                  }
+                  else if (useKeys && keys[key.value])
+                    refresh(info = keys[key.value], value);
                   else {
                     if (useKeys) {
                       info.key = key.value;
@@ -158,7 +157,6 @@ const createUpdates = (container, details, updates) => {
                   array.push(...info.nodes);
                 }
                 if (i) {
-                  const {length} = stack;
                   if (i < length) {
                     // TODO: dispose?
                     if (useKeys) {
