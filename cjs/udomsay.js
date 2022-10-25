@@ -143,14 +143,14 @@ const createUpdates = (container, details, updates) => {
                   if (!useKeys && key !== void 0)
                     useKeys = true;
                   let info = stack[i] || (stack[i] = new KeyedHoleInfo);
-                  if (useKeys && key === info.key && __token === info.__token)
+                  if (useKeys && key.value === info.key && __token === info.__token)
                     refresh(info, value);
-                  else if (useKeys && keys[key])
-                    refresh(info = (stack[i] = keys[key]), value);
+                  else if (useKeys && keys[key.value])
+                    refresh(info = (stack[i] = keys[key.value]), value);
                   else {
                     if (useKeys) {
-                      info.key = key;
-                      keys[key] = info;
+                      info.key = key.value;
+                      keys[key.value] = info;
                     }
                     populateInfo(info, __token, value);
                   }
