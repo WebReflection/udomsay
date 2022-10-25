@@ -130,17 +130,19 @@ const createUpdates = (container, details, updates) => {
               (updates[index] = (args, hole = getHole(child, length, args)) => {
                 const {length} = stack;
                 const array = [];
+                let useKeys = false;
                 for (i = 0; i < hole.length; i++) {
                   const value = hole[i];
                   const {__token, key} = value.args[1];
-                  const hasKey = key !== void 0;
+                  if (!useKeys && key !== void 0)
+                    useKeys = true;
                   let info = stack[i] || (stack[i] = new KeyedHoleInfo);
-                  if (hasKey && key === info.key && __token === info.__token)
+                  if (useKeys && key === info.key && __token === info.__token)
                     refresh(info, value);
-                  else if (hasKey && keys[key])
+                  else if (useKeys && keys[key])
                     refresh(info = (stack[i] = keys[key]), value);
                   else {
-                    if (hasKey) {
+                    if (useKeys) {
                       info.key = key;
                       keys[key] = info;
                     }
@@ -148,9 +150,27 @@ const createUpdates = (container, details, updates) => {
                   }
                   array.push(...info.nodes);
                 }
-                // TODO: dispose?
-                if (i < length) stack.splice(i);
-                nodes = diff(parentNode, nodes, array, diffable, node);
+                if (i < length) {
+                  const drop = stack.splice(i);
+                  // TODO: dispose?
+                  if (useKeys) {
+                    for (const {key} of drop)
+                      delete keys[key];
+                  }
+                }
+                if (i)
+                  nodes = diff(parentNode, nodes, array, diffable, node);
+                // fast path for all items cleanup
+                else {
+                  const {length} = nodes;
+                  if (length) {
+                    const range = document.createRange();
+                    range.setStartBefore(nodes[0]);
+                    range.setEndAfter(nodes[length - 1]);
+                    range.deleteContents();
+                    nodes = array;
+                  }
+                }
               })(args, value);
             }
             else {

@@ -68,6 +68,7 @@ The result can be **[tested in CodePen.io](https://codepen.io/WebReflection/pen/
 
 ### TODOs
 
+- [x] run some benchmark and fine-tune performance, specially around *arrays*
+- [ ] fix all benchmark gotchas!
 - [ ] add some TSDoc here and there, at least for the exported API
-- [ ] run some benchmark and fine-tune performance, specially around *arrays*
 - [ ] do some code cleanup once previous points are done, trying to shrink further the final *brotli* and *minified* size
