@@ -510,7 +510,7 @@ const useProperty = (key, fn) => {
 
 const setProperty = (node, key, value) => {
   if (considerPlugins && properties.has(key))
-    properties.get(key)(node, key, value);
+    properties.get(key)(node, value);
   else if (key === 'ref')
     value.current = node;
   else {
@@ -728,9 +728,7 @@ const createUpdates = (container, details, updates) => {
           if (typeof value === OBJECT) {
             if (isArray(value)) {
               const {parentNode} = node;
-              const stack = [];
-              const keys = {};
-              let i = 0, nodes = [];
+              let i = 0, stack = [], keys = {}, nodes = [];
               (updates[index] = (args, hole = getHole(child, length, args)) => {
                 const {length} = stack;
                 const array = [];
@@ -754,16 +752,17 @@ const createUpdates = (container, details, updates) => {
                   }
                   array.push(...info.nodes);
                 }
-                if (i < length) {
-                  const drop = stack.splice(i);
-                  // TODO: dispose?
-                  if (useKeys) {
-                    for (const {key} of drop)
-                      delete keys[key];
+                if (i) {
+                  if (i < length) {
+                    const drop = stack.splice(i);
+                    // TODO: dispose?
+                    if (useKeys) {
+                      for (const {key} of drop)
+                        delete keys[key];
+                    }
                   }
-                }
-                if (i)
                   nodes = diff(parentNode, nodes, array, diffable, node);
+                }
                 // fast path for all items cleanup
                 else {
                   const {length} = nodes;
@@ -773,6 +772,8 @@ const createUpdates = (container, details, updates) => {
                     range.setEndAfter(nodes[length - 1]);
                     range.deleteContents();
                     nodes = array;
+                    stack = [];
+                    keys = {};
                   }
                 }
               })(args, value);

@@ -60,7 +60,7 @@ exports.useProperty = useProperty;
 
 const setProperty = (node, key, value) => {
   if (considerPlugins && properties.has(key))
-    properties.get(key)(node, key, value);
+    properties.get(key)(node, value);
   else if (key === 'ref')
     value.current = node;
   else {
