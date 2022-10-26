@@ -2,9 +2,10 @@ var _token = {},
   _token2 = {};
 /** @jsx C */ /** @jsxFrag F */ /** @jsxInterpolation I */
 
-import { render, signal, createElement as C, Fragment as F, interpolation as I } from 'udomsay';
-const clicks = signal(0);
-function Counter() {
+import { render, signal, createElement as C, Fragment as F, interpolation as I } from '../es.js';
+function Counter({
+  clicks
+}) {
   return C("div", {
     __token: _token
   }, C("button", {
@@ -18,5 +19,6 @@ function Counter() {
   }, "+"));
 }
 render(C(Counter, {
-  __token: _token2
+  __token: _token2,
+  clicks: I(signal(0))
 }), document.body);

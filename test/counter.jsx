@@ -8,9 +8,7 @@ import {
   interpolation as I
 } from '../es.js';
 
-const clicks = signal(0);
-
-function Counter() {
+function Counter({clicks}) {
   return (
     <div>
       <button onclick={() => { clicks.value--; }}>-</button>
@@ -20,4 +18,4 @@ function Counter() {
   );
 }
 
-render(<Counter />, document.body);
+render(<Counter clicks={signal(0)} />, document.body);

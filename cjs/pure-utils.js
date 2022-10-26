@@ -2,7 +2,7 @@
 const {all, empty} = require('./constants.js');
 
 const {isArray} = Array;
-const {entries} = Object;
+const {create, entries} = Object;
 
 exports.isArray = isArray;
 exports.entries = entries;
@@ -43,8 +43,10 @@ const getProps = (keys, props) => {
   if (keys === all)
     return props.value;
   if (keys !== empty) {
+    const solved = create(props);
     for (const key of keys)
-      props[key] = props[key].value;
+      solved[key] = props[key].value;
+    return solved;
   }
   return props;
 };
