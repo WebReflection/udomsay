@@ -43,7 +43,6 @@
   "dependencies": {
     "domconstants": "^0.1.2",
     "html-escaper": "^3.0.3",
-    "udomdiff": "^1.1.0",
     "usignal": "^0.8.1"
   },
   "repository": {

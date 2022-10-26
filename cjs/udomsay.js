@@ -3,7 +3,6 @@
 
 const {VOID_ELEMENTS} = require('domconstants');
 const {escape} = require('html-escaper');
-const diff = (m => /* c8 ignore start */ m.__esModule ? m.default : m /* c8 ignore stop */)(require('udomdiff'));
 
 const {
   COMPONENT,
@@ -27,6 +26,7 @@ const {
 
 const {
   asValue,
+  diff,
   entries,
   dontIgnoreKey,
   getChild,
@@ -164,7 +164,7 @@ const createUpdates = (container, details, updates) => {
                         delete keys[stack[i++].key];
                     }
                   }
-                  nodes = diff(parentNode, nodes, array, diffable, node);
+                  nodes = diff(parentNode, nodes, array, node);
                 }
                 // fast path for all items cleanup
                 else {
@@ -198,7 +198,7 @@ const createUpdates = (container, details, updates) => {
                   else {
                     const {nodes} = info;
                     populateInfo(info, __token, value);
-                    diff(parentNode, nodes, info.nodes, diffable, node);
+                    diff(parentNode, nodes, info.nodes, node);
                   }
                 })(args, value);
               } 
@@ -242,8 +242,6 @@ const createUpdates = (container, details, updates) => {
     }
   }
 };
-
-const diffable = O => O;
 
 const getNodes = (content, details, updates, isNode) => {
   const node = importNode(content, details, updates);
