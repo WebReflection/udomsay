@@ -1,6 +1,6 @@
 {
   "name": "udomsay",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "A stricter, signals driven, JSX based library",
   "main": "./cjs/index.js",
   "scripts": {
