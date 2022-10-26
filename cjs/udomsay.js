@@ -137,12 +137,16 @@ const createUpdates = (container, details, updates) => {
                 const {length} = stack;
                 let useKeys = false;
                 for (i = 0; i < hole.length; i++) {
+                  const known = i < length;
                   const value = hole[i];
                   const {__token, key} = value.args[1];
                   if (!useKeys && key !== void 0)
                     useKeys = true;
-                  let info = i < length ? stack[i] : new KeyedHoleInfo;
-                  if (useKeys && key.value === info.key && __token === info.__token)
+                  let info = known ? stack[i] : new KeyedHoleInfo;
+                  if (
+                    (known && __token === info.__token) &&
+                    (!useKeys || key.value === info.key)
+                  )
                     refresh(info, value);
                   else if (useKeys && keys[key.value])
                     refresh(info = keys[key.value], value);
