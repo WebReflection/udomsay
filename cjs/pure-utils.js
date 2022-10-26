@@ -58,25 +58,33 @@ const useProperty = (key, fn) => {
 };
 exports.useProperty = useProperty;
 
-const setProperty = (node, key, value) => {
+const setProperty = (node, key, value, prev) => {
   if (considerPlugins && properties.has(key))
-    properties.get(key)(node, value);
-  else if (key === 'ref')
-    value.current = node;
-  else {
-    if (key === 'class')
-      key += 'Name';
-    else if (key.startsWith('on'))
-      key = key.toLowerCase();
-    if (key in node) {
-      if (node[key] !== value)
+    properties.get(key)(node, value, prev);
+  else if (prev[key] !== value) {
+    prev[key] = value;
+    switch (key) {
+      case 'class':
+        key += 'Name';
+      case 'className':
+      case 'textContent':
         node[key] = value;
-    }
-    else {
-      if (value == null)
-        node.removeAttribute(key);
-      else
-        node.setAttribute(key, value);
+        break;
+      case 'ref':
+        value.current = node;
+        break;
+      default:
+        if (key.startsWith('on'))
+          node[key.toLowerCase()] = value;
+        else if (key in node)
+          node[key] = value;
+        else {
+          if (value == null)
+            node.removeAttribute(key);
+          else
+            node.setAttribute(key, value);
+        }
+        break;
     }
   }
 };

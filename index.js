@@ -508,25 +508,33 @@ const useProperty = (key, fn) => {
   properties.set(key, fn);
 };
 
-const setProperty = (node, key, value) => {
+const setProperty = (node, key, value, prev) => {
   if (considerPlugins && properties.has(key))
-    properties.get(key)(node, value);
-  else if (key === 'ref')
-    value.current = node;
-  else {
-    if (key === 'class')
-      key += 'Name';
-    else if (key.startsWith('on'))
-      key = key.toLowerCase();
-    if (key in node) {
-      if (node[key] !== value)
+    properties.get(key)(node, value, prev);
+  else if (prev[key] !== value) {
+    prev[key] = value;
+    switch (key) {
+      case 'class':
+        key += 'Name';
+      case 'className':
+      case 'textContent':
         node[key] = value;
-    }
-    else {
-      if (value == null)
-        node.removeAttribute(key);
-      else
-        node.setAttribute(key, value);
+        break;
+      case 'ref':
+        value.current = node;
+        break;
+      default:
+        if (key.startsWith('on'))
+          node[key.toLowerCase()] = value;
+        else if (key in node)
+          node[key] = value;
+        else {
+          if (value == null)
+            node.removeAttribute(key);
+          else
+            node.setAttribute(key, value);
+        }
+        break;
     }
   }
 };
@@ -821,19 +829,20 @@ const createUpdates = (container, details, updates) => {
     }
     // attributes
     else {
+      const prev = {};
       updates.push(
         props === all ?
         args => {
           const values = child.reduce(getChild, args)[1].value;
           for (const [key, value] of entries(values)) {
             if (dontIgnoreKey(key))
-              setProperty(node, key, value);
+              setProperty(node, key, value, prev);
           }
         } :
         args => {
           const values = child.reduce(getChild, args)[1];
           for (const key of props)
-            setProperty(node, key, values[key].value);
+            setProperty(node, key, values[key].value, prev);
         }
       );
     }

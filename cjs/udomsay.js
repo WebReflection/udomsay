@@ -223,19 +223,20 @@ const createUpdates = (container, details, updates) => {
     }
     // attributes
     else {
+      const prev = {};
       updates.push(
         props === all ?
         args => {
           const values = child.reduce(getChild, args)[1].value;
           for (const [key, value] of entries(values)) {
             if (dontIgnoreKey(key))
-              setProperty(node, key, value);
+              setProperty(node, key, value, prev);
           }
         } :
         args => {
           const values = child.reduce(getChild, args)[1];
           for (const key of props)
-            setProperty(node, key, values[key].value);
+            setProperty(node, key, values[key].value, prev);
         }
       );
     }
