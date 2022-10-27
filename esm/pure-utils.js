@@ -1,7 +1,7 @@
-import {all, empty} from './constants.js';
+/*! (c) Andrea Giammarchi - ISC */
 
 const {isArray} = Array;
-const {create, entries} = Object;
+const {entries} = Object;
 
 export {isArray, entries};
 
@@ -31,18 +31,6 @@ export const getHole = (child, length, args) => {
 };
 
 export const getNode = ({childNodes}, i) => childNodes[i];
-
-export const getProps = (keys, props) => {
-  if (keys === all)
-    return props.value;
-  if (keys !== empty) {
-    const solved = create(props);
-    for (const key of keys)
-      solved[key] = props[key].value;
-    return solved;
-  }
-  return props;
-};
 
 let considerPlugins = false;
 
@@ -111,7 +99,7 @@ export const diff = (parentNode, a, b, before) => {
       while (aStart < aEnd) {
         // remove the node only if it's unknown or not live
         if (!map || !map.has(a[aStart]))
-          parentNode.removeChild(a[aStart]);
+          a[aStart].remove();
         aStart++;
       }
     }
@@ -209,7 +197,7 @@ export const diff = (parentNode, a, b, before) => {
       // to remove it, and check the next live node out instead, meaning
       // that only the live list index should be forwarded
       else
-        parentNode.removeChild(a[aStart++]);
+        a[aStart++].remove();
     }
   }
   return b;

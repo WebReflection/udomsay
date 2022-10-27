@@ -18,7 +18,12 @@ function Counter({
     })
   }, "+"));
 }
-render(C(Counter, {
+const comp = C(Counter, {
   __token: _token2,
   clicks: I(signal(0))
-}), document.body);
+});
+const {
+  body
+} = document;
+render(comp, body);
+setTimeout(render, 2000, comp, body);

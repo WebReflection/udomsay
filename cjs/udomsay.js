@@ -130,45 +130,51 @@ const createUpdates = (container, details, updates) => {
           if (typeof value === OBJECT) {
             if (isArray(value)) {
               const {parentNode} = node;
-              let i = 0, stack = [], keys = {}, nodes = [];
+              let isKeyed = false, keys = null, stack = empty, nodes = empty;
               (updates[index] = (args, hole = getHole(child, length, args)) => {
                 const array = [];
                 const newStack = [];
                 const {length} = stack;
-                let useKeys = false;
-                for (i = 0; i < hole.length; i++) {
+                let i = 0;
+                for (; i < hole.length; i++) {
                   const known = i < length;
                   const value = hole[i];
                   const {__token, key} = value.args[1];
-                  if (!useKeys && key !== void 0)
-                    useKeys = true;
-                  let info = known ? stack[i] : new KeyedHoleInfo;
+                  if (!isKeyed && key !== void 0) {
+                    isKeyed = true;
+                    keys = {};
+                  }
+                  let info = known ? stack[i] : null;
+                  // fast path for same __token at same keyed/index
                   if (
                     (known && __token === info.__token) &&
-                    (!useKeys || key.value === info.key)
+                    (!isKeyed || key.value === info.key)
                   )
                     refresh(info, value);
-                  else if (useKeys && keys[key.value])
+                  // fast path for known keyed items
+                  else if (isKeyed && keys[key.value])
                     refresh(info = keys[key.value], value);
+                  // start fresh with new item
                   else {
-                    if (useKeys) {
-                      info.key = key.value;
+                    if (isKeyed) {
+                      info = new KeyedHoleInfo(key.value);
                       keys[key.value] = info;
                     }
+                    else
+                      info = new HoleInfo;
                     populateInfo(info, __token, value);
                   }
                   newStack.push(info);
                   array.push(...info.nodes);
                 }
                 if (i) {
-                  if (i < length) {
-                    // TODO: dispose?
-                    if (useKeys) {
-                      while (i < length)
-                        delete keys[stack[i++].key];
-                    }
+                  // TODO: dispose?
+                  if (isKeyed) {
+                    for (; i < length; i++)
+                      delete keys[stack[i].key];
                   }
                   nodes = diff(parentNode, nodes, array, node);
+                  stack = newStack;
                 }
                 // fast path for all items cleanup
                 else {
@@ -178,11 +184,12 @@ const createUpdates = (container, details, updates) => {
                     range.setStartBefore(nodes[0]);
                     range.setEndAfter(nodes[length - 1]);
                     range.deleteContents();
-                    nodes = array;
-                    keys = {};
+                    nodes = empty;
+                    if (isKeyed)
+                      keys = {};
                   }
+                  stack = empty;
                 }
-                stack = newStack;
               })(args, value);
             }
             else {

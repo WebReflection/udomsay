@@ -1,8 +1,8 @@
 'use strict';
-const {all, empty} = require('./constants.js');
+/*! (c) Andrea Giammarchi - ISC */
 
 const {isArray} = Array;
-const {create, entries} = Object;
+const {entries} = Object;
 
 exports.isArray = isArray;
 exports.entries = entries;
@@ -38,19 +38,6 @@ exports.getHole = getHole;
 
 const getNode = ({childNodes}, i) => childNodes[i];
 exports.getNode = getNode;
-
-const getProps = (keys, props) => {
-  if (keys === all)
-    return props.value;
-  if (keys !== empty) {
-    const solved = create(props);
-    for (const key of keys)
-      solved[key] = props[key].value;
-    return solved;
-  }
-  return props;
-};
-exports.getProps = getProps;
 
 let considerPlugins = false;
 
@@ -121,7 +108,7 @@ const diff = (parentNode, a, b, before) => {
       while (aStart < aEnd) {
         // remove the node only if it's unknown or not live
         if (!map || !map.has(a[aStart]))
-          parentNode.removeChild(a[aStart]);
+          a[aStart].remove();
         aStart++;
       }
     }
@@ -219,7 +206,7 @@ const diff = (parentNode, a, b, before) => {
       // to remove it, and check the next live node out instead, meaning
       // that only the live list index should be forwarded
       else
-        parentNode.removeChild(a[aStart++]);
+        a[aStart++].remove();
     }
   }
   return b;

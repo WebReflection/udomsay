@@ -303,8 +303,10 @@ const UDOMSAY = '<!--🙊-->';
 const all = [];
 const empty = [];
 
+/*! (c) Andrea Giammarchi - ISC */
+
 const {isArray} = Array;
-const {create, entries} = Object;
+const {entries} = Object;
 
 const properties = new Map;
 
@@ -332,18 +334,6 @@ const getHole = (child, length, args) => {
 };
 
 const getNode = ({childNodes}, i) => childNodes[i];
-
-const getProps = (keys, props) => {
-  if (keys === all)
-    return props.value;
-  if (keys !== empty) {
-    const solved = create(props);
-    for (const key of keys)
-      solved[key] = props[key].value;
-    return solved;
-  }
-  return props;
-};
 
 let considerPlugins = false;
 
@@ -412,7 +402,7 @@ const diff = (parentNode, a, b, before) => {
       while (aStart < aEnd) {
         // remove the node only if it's unknown or not live
         if (!map || !map.has(a[aStart]))
-          parentNode.removeChild(a[aStart]);
+          a[aStart].remove();
         aStart++;
       }
     }
@@ -510,7 +500,7 @@ const diff = (parentNode, a, b, before) => {
       // to remove it, and check the next live node out instead, meaning
       // that only the live list index should be forwarded
       else
-        parentNode.removeChild(a[aStart++]);
+        a[aStart++].remove();
     }
   }
   return b;
@@ -554,9 +544,8 @@ class HoleInfo {
 }
 
 class KeyedHoleInfo extends HoleInfo {
-  constructor() {
-    super();
-    this.key = void 0;
+  constructor(key) {
+    super().key = key;
   }
 }
 
@@ -585,33 +574,43 @@ class ComponentStore extends Store {
     this.result = null; // TODO: redundant as set in the sync effect?
     this.dispose = effect(() => {
       const {init, args} = this;
-      const [component, props, ...children] = args;
+      let [component, props, ...children] = args;
       if (init) {
         this.init = false;
         // map interpolations passed as props to components
         if (props) {
-          if (props instanceof Interpolation)
+          if (props instanceof Interpolation) {
             this.keys = all;
+            props = props.value;
+          }
           else {
             let keys = empty;
             for (const [key, value] of entries(props)) {
-              if (value instanceof Interpolation)
+              if (value instanceof Interpolation) {
                 (keys === empty ? (keys = []) : keys).push(key);
+                props[key] = value.value;
+              }
             }
             this.keys = keys;
           }
         }
       }
-      this.result = component(getProps(this.keys, props), ...children);
+      this.result = component(props, ...children);
       if (!init)
         this.update();
     });
   }
   refresh(args) {
     if (args !== this.args) {
-      this.args = args;
-      const [component, props, ...children] = args;
-      this.result = component(getProps(this.keys, props), ...children);
+      let [component, props, ...children] = (this.args = args);
+      const {keys} = this;
+      if (keys === all)
+        props = props.value;
+      else if (keys !== empty) {
+        for (const key of keys)
+          props[key] = props[key].value;
+      }
+      this.result = component(props, ...children);
       this.update();
     }
   }
@@ -713,45 +712,51 @@ const createUpdates = (container, details, updates) => {
           if (typeof value === OBJECT) {
             if (isArray(value)) {
               const {parentNode} = node;
-              let i = 0, stack = [], keys = {}, nodes = [];
+              let isKeyed = false, keys = null, stack = empty, nodes = empty;
               (updates[index] = (args, hole = getHole(child, length, args)) => {
                 const array = [];
                 const newStack = [];
                 const {length} = stack;
-                let useKeys = false;
-                for (i = 0; i < hole.length; i++) {
+                let i = 0;
+                for (; i < hole.length; i++) {
                   const known = i < length;
                   const value = hole[i];
                   const {__token, key} = value.args[1];
-                  if (!useKeys && key !== void 0)
-                    useKeys = true;
-                  let info = known ? stack[i] : new KeyedHoleInfo;
+                  if (!isKeyed && key !== void 0) {
+                    isKeyed = true;
+                    keys = {};
+                  }
+                  let info = known ? stack[i] : null;
+                  // fast path for same __token at same keyed/index
                   if (
                     (known && __token === info.__token) &&
-                    (!useKeys || key.value === info.key)
+                    (!isKeyed || key.value === info.key)
                   )
                     refresh(info, value);
-                  else if (useKeys && keys[key.value])
+                  // fast path for known keyed items
+                  else if (isKeyed && keys[key.value])
                     refresh(info = keys[key.value], value);
+                  // start fresh with new item
                   else {
-                    if (useKeys) {
-                      info.key = key.value;
+                    if (isKeyed) {
+                      info = new KeyedHoleInfo(key.value);
                       keys[key.value] = info;
                     }
+                    else
+                      info = new HoleInfo;
                     populateInfo(info, __token, value);
                   }
                   newStack.push(info);
                   array.push(...info.nodes);
                 }
                 if (i) {
-                  if (i < length) {
-                    // TODO: dispose?
-                    if (useKeys) {
-                      while (i < length)
-                        delete keys[stack[i++].key];
-                    }
+                  // TODO: dispose?
+                  if (isKeyed) {
+                    for (; i < length; i++)
+                      delete keys[stack[i].key];
                   }
                   nodes = diff(parentNode, nodes, array, node);
+                  stack = newStack;
                 }
                 // fast path for all items cleanup
                 else {
@@ -761,11 +766,12 @@ const createUpdates = (container, details, updates) => {
                     range.setStartBefore(nodes[0]);
                     range.setEndAfter(nodes[length - 1]);
                     range.deleteContents();
-                    nodes = array;
-                    keys = {};
+                    nodes = empty;
+                    if (isKeyed)
+                      keys = {};
                   }
+                  stack = empty;
                 }
-                stack = newStack;
               })(args, value);
             }
             else {

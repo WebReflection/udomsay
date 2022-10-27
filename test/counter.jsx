@@ -18,4 +18,9 @@ function Counter({clicks}) {
   );
 }
 
-render(<Counter clicks={signal(0)} />, document.body);
+const comp = <Counter clicks={signal(0)} />;
+const {body} = document;
+
+render(comp, body);
+
+setTimeout(render, 2000, comp, body);

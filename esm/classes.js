@@ -3,7 +3,7 @@
 import {effect} from 'usignal';
 
 import {FRAGMENT, all, empty} from './constants.js';
-import {entries, getProps} from './pure-utils.js';
+import {entries} from './pure-utils.js';
 
 export {Signal} from 'usignal';
 
@@ -43,9 +43,8 @@ export class HoleInfo {
 }
 
 export class KeyedHoleInfo extends HoleInfo {
-  constructor() {
-    super();
-    this.key = void 0;
+  constructor(key) {
+    super().key = key;
   }
 }
 
@@ -74,33 +73,43 @@ export class ComponentStore extends Store {
     this.result = null; // TODO: redundant as set in the sync effect?
     this.dispose = effect(() => {
       const {init, args} = this;
-      const [component, props, ...children] = args;
+      let [component, props, ...children] = args;
       if (init) {
         this.init = false;
         // map interpolations passed as props to components
         if (props) {
-          if (props instanceof Interpolation)
+          if (props instanceof Interpolation) {
             this.keys = all;
+            props = props.value;
+          }
           else {
             let keys = empty;
             for (const [key, value] of entries(props)) {
-              if (value instanceof Interpolation)
+              if (value instanceof Interpolation) {
                 (keys === empty ? (keys = []) : keys).push(key);
+                props[key] = value.value;
+              }
             }
             this.keys = keys;
           }
         }
       }
-      this.result = component(getProps(this.keys, props), ...children);
+      this.result = component(props, ...children);
       if (!init)
         this.update();
     });
   }
   refresh(args) {
     if (args !== this.args) {
-      this.args = args;
-      const [component, props, ...children] = args;
-      this.result = component(getProps(this.keys, props), ...children);
+      let [component, props, ...children] = (this.args = args);
+      const {keys} = this;
+      if (keys === all)
+        props = props.value;
+      else if (keys !== empty) {
+        for (const key of keys)
+          props[key] = props[key].value;
+      }
+      this.result = component(props, ...children);
       this.update();
     }
   }
