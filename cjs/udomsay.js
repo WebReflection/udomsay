@@ -145,15 +145,15 @@ const createUpdates = (container, details, updates) => {
                     keys = {};
                   }
                   let info = known ? stack[i] : null;
-                  // fast path for same __token at same keyed/index
                   if (
-                    (known && __token === info.__token) &&
-                    (!isKeyed || key.value === info.key)
-                  )
+                    // fast path for same __token at same keyed/index
+                    ((known && __token === info.__token) &&
+                    (!isKeyed || key.value === info.key)) ||
+                    // fast path for known keyed items
+                    (isKeyed && (info = keys[key.value]))
+                  ) {
                     refresh(info, value);
-                  // fast path for known keyed items
-                  else if (isKeyed && keys[key.value])
-                    refresh(info = keys[key.value], value);
+                  }
                   // start fresh with new item
                   else {
                     if (isKeyed) {
@@ -234,7 +234,7 @@ const createUpdates = (container, details, updates) => {
     }
     // attributes
     else {
-      const prev = {};
+      const prev = new Map;
       updates.push(
         props === all ?
         args => {

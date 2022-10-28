@@ -5,8 +5,6 @@ const {entries} = Object;
 
 export {isArray, entries};
 
-const properties = new Map;
-
 export const asValue = (value, isSignal) => {
   const data = isSignal ? value.value : value;
   return data == null ? '' : data;
@@ -32,6 +30,7 @@ export const getHole = (child, length, args) => {
 
 export const getNode = ({childNodes}, i) => childNodes[i];
 
+const properties = new Map;
 let considerPlugins = false;
 
 export const useProperty = (key, fn) => {
@@ -42,14 +41,14 @@ export const useProperty = (key, fn) => {
 export const setProperty = (node, key, value, prev) => {
   if (considerPlugins && properties.has(key))
     properties.get(key)(node, value, prev);
-  else if (prev[key] !== value) {
-    prev[key] = value;
+  else if (prev.get(key) !== value) {
     switch (key) {
       case 'class':
         key += 'Name';
       case 'className':
       case 'textContent':
-        node[key] = value;
+        if (value || prev.has(value))
+          node[key] = value;
         break;
       case 'ref':
         value.current = node;
@@ -67,6 +66,7 @@ export const setProperty = (node, key, value, prev) => {
         }
         break;
     }
+    prev.set(key, value);
   }
 };
 

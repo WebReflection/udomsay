@@ -262,8 +262,6 @@ const empty = [];
 const {isArray} = Array;
 const {entries} = Object;
 
-const properties = new Map;
-
 const asValue = (value, isSignal) => {
   const data = isSignal ? value.value : value;
   return data == null ? '' : data;
@@ -289,6 +287,7 @@ const getHole = (child, length, args) => {
 
 const getNode = ({childNodes}, i) => childNodes[i];
 
+const properties = new Map;
 let considerPlugins = false;
 
 const useProperty = (key, fn) => {
@@ -299,14 +298,14 @@ const useProperty = (key, fn) => {
 const setProperty = (node, key, value, prev) => {
   if (considerPlugins && properties.has(key))
     properties.get(key)(node, value, prev);
-  else if (prev[key] !== value) {
-    prev[key] = value;
+  else if (prev.get(key) !== value) {
     switch (key) {
       case 'class':
         key += 'Name';
       case 'className':
       case 'textContent':
-        node[key] = value;
+        if (value || prev.has(value))
+          node[key] = value;
         break;
       case 'ref':
         value.current = node;
@@ -324,6 +323,7 @@ const setProperty = (node, key, value, prev) => {
         }
         break;
     }
+    prev.set(key, value);
   }
 };
 
@@ -681,15 +681,15 @@ const createUpdates = (container, details, updates) => {
                     keys = {};
                   }
                   let info = known ? stack[i] : null;
-                  // fast path for same __token at same keyed/index
                   if (
-                    (known && __token === info.__token) &&
-                    (!isKeyed || key.value === info.key)
-                  )
+                    // fast path for same __token at same keyed/index
+                    ((known && __token === info.__token) &&
+                    (!isKeyed || key.value === info.key)) ||
+                    // fast path for known keyed items
+                    (isKeyed && (info = keys[key.value]))
+                  ) {
                     refresh(info, value);
-                  // fast path for known keyed items
-                  else if (isKeyed && keys[key.value])
-                    refresh(info = keys[key.value], value);
+                  }
                   // start fresh with new item
                   else {
                     if (isKeyed) {
@@ -770,7 +770,7 @@ const createUpdates = (container, details, updates) => {
     }
     // attributes
     else {
-      const prev = {};
+      const prev = new Map;
       updates.push(
         props === all ?
         args => {

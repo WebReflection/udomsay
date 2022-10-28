@@ -7,8 +7,6 @@ const {entries} = Object;
 exports.isArray = isArray;
 exports.entries = entries;
 
-const properties = new Map;
-
 const asValue = (value, isSignal) => {
   const data = isSignal ? value.value : value;
   return data == null ? '' : data;
@@ -39,6 +37,7 @@ exports.getHole = getHole;
 const getNode = ({childNodes}, i) => childNodes[i];
 exports.getNode = getNode;
 
+const properties = new Map;
 let considerPlugins = false;
 
 const useProperty = (key, fn) => {
@@ -50,14 +49,14 @@ exports.useProperty = useProperty;
 const setProperty = (node, key, value, prev) => {
   if (considerPlugins && properties.has(key))
     properties.get(key)(node, value, prev);
-  else if (prev[key] !== value) {
-    prev[key] = value;
+  else if (prev.get(key) !== value) {
     switch (key) {
       case 'class':
         key += 'Name';
       case 'className':
       case 'textContent':
-        node[key] = value;
+        if (value || prev.has(value))
+          node[key] = value;
         break;
       case 'ref':
         value.current = node;
@@ -75,6 +74,7 @@ const setProperty = (node, key, value, prev) => {
         }
         break;
     }
+    prev.set(key, value);
   }
 };
 exports.setProperty = setProperty;
