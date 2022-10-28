@@ -234,7 +234,7 @@ const createUpdates = (container, details, updates) => {
     }
     // attributes
     else {
-      const prev = new Map;
+      const prev = {};
       updates.push(
         props === all ?
         args => {

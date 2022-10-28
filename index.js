@@ -298,14 +298,14 @@ const useProperty = (key, fn) => {
 const setProperty = (node, key, value, prev) => {
   if (considerPlugins && properties.has(key))
     properties.get(key)(node, value, prev);
-  else if (prev.get(key) !== value) {
+  else if (prev[key] !== value) {
+    prev[key] = value;
     switch (key) {
       case 'class':
         key += 'Name';
       case 'className':
       case 'textContent':
-        if (value || prev.has(value))
-          node[key] = value;
+        node[key] = value;
         break;
       case 'ref':
         value.current = node;
@@ -323,7 +323,6 @@ const setProperty = (node, key, value, prev) => {
         }
         break;
     }
-    prev.set(key, value);
   }
 };
 
@@ -770,7 +769,7 @@ const createUpdates = (container, details, updates) => {
     }
     // attributes
     else {
-      const prev = new Map;
+      const prev = {};
       updates.push(
         props === all ?
         args => {
