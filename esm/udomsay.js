@@ -1,7 +1,7 @@
 /*! (c) Andrea Giammarchi - ISC */
 
 import {VOID_ELEMENTS} from 'domconstants';
-import {escape} from 'html-escaper';
+import {escape} from './html-escaper.js';
 
 import {
   COMPONENT,

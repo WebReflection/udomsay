@@ -2,7 +2,7 @@
 /*! (c) Andrea Giammarchi - ISC */
 
 const {VOID_ELEMENTS} = require('domconstants');
-const {escape} = require('html-escaper');
+const {escape} = require('./html-escaper.js');
 
 const {
   COMPONENT,

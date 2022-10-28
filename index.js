@@ -229,51 +229,13 @@ const options = {async: false};
 const effect = (fn, value) => effect$1(fn, value, options);
 
 /*! (c) Andrea Giammarchi - ISC */
+const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$/i;
 
-// Custom
-var UID = '-' + Math.random().toFixed(6) + '%';
-//                           Edge issue!
+/*! (c) Andrea Giammarchi - ISC */
 
-var UID_IE = false;
-
-try {
-  if (!(function (template, content, tabindex) {
-    return content in template && (
-      (template.innerHTML = '<p ' + tabindex + '="' + UID + '"></p>'),
-      template[content].childNodes[0].getAttribute(tabindex) == UID
-    );
-  }(document.createElement('template'), 'content', 'tabindex'))) {
-    UID = '_dt: ' + UID.slice(1, -1) + ';';
-    UID_IE = true;
-  }
-} catch(meh) {}
-var VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$/i;
-
-/**
- * Copyright (C) 2017-present by Andrea Giammarchi - @WebReflection
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
-const {replace} = '';
-const ca = /[&<>'"]/g;
-
+// @see https://github.com/WebReflection/html-escaper#readme
+const es = /[&<>'"]/g;
+const cape = pe => esca[pe];
 const esca = {
   '&': '&amp;',
   '<': '&lt;',
@@ -281,16 +243,8 @@ const esca = {
   "'": '&#39;',
   '"': '&quot;'
 };
-const pe = m => esca[m];
 
-/**
- * Safely escape HTML entities such as `&`, `<`, `>`, `"`, and `'`.
- * @param {string} es the input to safely escape
- * @returns {string} the escaped input, and it **throws** an error if
- *  the input type is unexpected, except for boolean and numbers,
- *  converted as string.
- */
-const escape = es => replace.call(es, ca, pe);
+const escape = value => value.replace(es, cape);
 
 /*! (c) Andrea Giammarchi - ISC */
 
@@ -646,9 +600,9 @@ const render = (what, where) => {
     update(args);
 };
 
-let {document: document$1} = globalThis;
+let {document} = globalThis;
 const useDocument = doc => {
-  document$1 = doc;
+  document = doc;
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -762,7 +716,7 @@ const createUpdates = (container, details, updates) => {
                 else {
                   const {length} = nodes;
                   if (length) {
-                    const range = document$1.createRange();
+                    const range = document.createRange();
                     range.setStartBefore(nodes[0]);
                     range.setEndAfter(nodes[length - 1]);
                     range.deleteContents();
@@ -858,7 +812,7 @@ const getTree = (fragment, tree, index) => {
 };
 
 const importNode = (content, details, updates) => {
-  const container = document$1.importNode(content, true);
+  const container = document.importNode(content, true);
   createUpdates(container, details, updates);
   return container;
 };
@@ -904,7 +858,7 @@ const parseComponent = args => {
 function parseContent() {
   const info = new Info(this, empty, empty, [], []);
   createDetails.apply(info, arguments);
-  const template = document$1.createElement('template');
+  const template = document.createElement('template');
   template.innerHTML = info.html.join('');
   const {content} = template;
   return [
@@ -944,7 +898,7 @@ const setStore = (info, __token, {type, args}, isNode) => {
 };
 
 const useDataUpdate = (child, length, node, value, isSignal) => {
-  const text = document$1.createTextNode(asValue(value, isSignal));
+  const text = document.createTextNode(asValue(value, isSignal));
   node.replaceWith(text);
   return args => {
     text.data = asValue(getHole(child, length, args), isSignal);
