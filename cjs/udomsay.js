@@ -1,23 +1,17 @@
 'use strict';
 /*! (c) Andrea Giammarchi - ISC */
 
-const {VOID_ELEMENTS} = require('domconstants');
-const {escape} = require('./html-escaper.js');
-
 const {
   COMPONENT,
   FRAGMENT,
   NODE,
   OBJECT,
-  UDOMSAY,
-  all,
   empty
 } = require('./constants.js');
 
 const {
   ComponentStore,
   HoleInfo,
-  Info,
   Interpolation,
   KeyedHoleInfo,
   Signal,
@@ -35,6 +29,8 @@ const {
   isArray,
   setProperty
 } = require('./pure-utils.js');
+
+const {parseContent} = require('./parser.js');
 
 const Fragment = Symbol();
 exports.Fragment = Fragment;
@@ -71,58 +67,31 @@ exports.useDocument = useDocument;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-function createDetails(entry, props) {
-  const {type, html} = this;
-  const {length} = arguments;
-  switch (type) {
-    case NODE:
-      html.push(`<${entry}`);
-      if (props) {
-        const {is} = props;
-        if (is) html.push(` is="${is}"`);
-        if (props instanceof Interpolation)
-          this.push(all);
-        else {
-          const runtime = [];
-          for (const [key, value] of entries(props)) {
-            if (dontIgnoreKey(key)) {
-              if (value instanceof Interpolation)
-                runtime.push(key);
-              else {
-                html.push(
-                  ` ${key === 'className' ? 'class' : key}="${escape(value)}"`
-                );
-              }
-            }
-          }
-          if (runtime.length)
-            this.push(runtime);
-        }
-      }
-      if (length === 2)
-        html.push(VOID_ELEMENTS.test(entry) ? ' />' : `></${entry}>`);
-      else {
-        html.push('>');
-        mapChildren.apply(this, arguments);
-        html.push(`</${entry}>`);
-      }
-      return 1;
-    case COMPONENT:
-      html.push(UDOMSAY);
-      this.push(empty);
-      return 1;
-    case FRAGMENT:
-      return mapChildren.apply(this, arguments);
-  }
-  throw new Error(entry);
-}
-
 const createUpdates = (container, details, updates) => {
   for (const {child, tree, props, hole} of details) {
     const node = tree.reduce(getNode, container);
-    const length = child.length - 1;
+    // attributes
+    if (props) {
+      const prev = {};
+      updates.push(
+        props.length ?
+        args => {
+          const values = child.reduce(getChild, args)[1];
+          for (const key of props)
+            setProperty(node, key, values[key].value, prev);
+        } :
+        args => {
+          const values = child.reduce(getChild, args)[1].value;
+          for (const [key, value] of entries(values)) {
+            if (dontIgnoreKey(key))
+              setProperty(node, key, value, prev);
+          }
+        }
+      );
+    }
     // holes or static components
-    if (props === empty) {
+    else {
+      const length = child.length - 1;
       const index = updates.push(hole ?
         // fine-tune the kind of update that's needed in the future
         args => {
@@ -232,47 +201,22 @@ const createUpdates = (container, details, updates) => {
         }
       ) - 1;
     }
-    // attributes
-    else {
-      const prev = {};
-      updates.push(
-        props === all ?
-        args => {
-          const values = child.reduce(getChild, args)[1].value;
-          for (const [key, value] of entries(values)) {
-            if (dontIgnoreKey(key))
-              setProperty(node, key, value, prev);
-          }
-        } :
-        args => {
-          const values = child.reduce(getChild, args)[1];
-          for (const key of props)
-            setProperty(node, key, values[key].value, prev);
-        }
-      );
-    }
   }
+};
+
+const getInfo = (type, {html, ops}) => {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  const {content} = template;
+  return [
+    type === FRAGMENT ? content : content.childNodes[0],
+    ops
+  ];
 };
 
 const getNodes = (content, details, updates, isNode) => {
   const node = importNode(content, details, updates);
   return isNode ? [node] : [...node.childNodes];
-};
-
-const getTree = (fragment, tree, index) => {
-  let newTree;
-  if (fragment) {
-    const {length} = tree;
-    if (length) {
-      const sum = tree[length - 1];
-      newTree = tree.slice(0, -1).concat(sum + index);
-    }
-    else
-      newTree = empty;
-  }
-  else
-    newTree = tree.concat(index);
-  return newTree;
 };
 
 const importNode = (content, details, updates) => {
@@ -281,58 +225,20 @@ const importNode = (content, details, updates) => {
   return container;
 };
 
-function mapChildren(_, props) {
-  const {fragment, child, tree, html} = this;
-  const root = fragment && !props?.__token;
-  let index = 0;
-  for (let i = 2; i < arguments.length; i++) {
-    const arg = arguments[i];
-    if (typeof arg === OBJECT) {
-      if (arg instanceof Interpolation) {
-        html.push(UDOMSAY);
-        this.push(empty, true, child.concat(i), getTree(root, tree, index++));
-      }
-      else {
-        const {type, args} = arg;
-        index += createDetails.apply(
-          this.next(type, i, getTree(root, tree, index)),
-          args
-        );
-      }
-    }
-    else {
-      index++;
-      html.push(arg);
-    }
-  }
-  return index;
-}
-
 const components = new WeakMap;
 const parseComponent = args => {
   const store = new ComponentStore(args);
   let info = components.get(args[0]);
   if (!info) {
     const {type, args: resultArgs} = store.result;
-    components.set(args[0], info = parseContent.apply(type, resultArgs));
+    components.set(args[0], info = getInfo(type, parseContent(type, resultArgs)));
   }
   return [store, info];
 };
 
-function parseContent() {
-  const info = new Info(this, empty, empty, [], []);
-  createDetails.apply(info, arguments);
-  const template = document.createElement('template');
-  template.innerHTML = info.html.join('');
-  const {content} = template;
-  return [
-    this == FRAGMENT ? content : content.childNodes[0],
-    info.details
-  ];
-}
-
 const parseNode = (__token, type, args) => (
-  __token.info || (__token.info = parseContent.apply(type, args))
+  __token.info ||
+  (__token.info = getInfo(type, parseContent(type, args)))
 );
 
 const populateInfo = (info, __token, value) => {

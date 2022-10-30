@@ -3,20 +3,22 @@
 
 const {effect} = require('usignal');
 
-const {FRAGMENT, all, empty} = require('./constants.js');
+const {FRAGMENT, empty} = require('./constants.js');
 const {entries} = require('./pure-utils.js');
+
+const all = [];
 
 (m => {
   exports.Signal = m.Signal;
 })(require('usignal'));
 
 class Info {
-  constructor(type, child, tree, details, html) {
-    this.fragment = type == FRAGMENT;
+  constructor(type, child, tree, ops, html) {
+    this.fragment = type === FRAGMENT;
     this.type = type;
     this.child = child;
     this.tree = tree;
-    this.details = details;
+    this.ops = ops;
     this.html = html;
   }
   next(type, index, tree) {
@@ -24,12 +26,12 @@ class Info {
       type,
       this.child.concat(index),
       tree,
-      this.details,
+      this.ops,
       this.html
     );
   }
   push(props, hole = false, child = this.child, tree = this.tree) {
-    this.details.push({child, tree, props, hole});
+    this.ops.push({child, tree, props, hole});
   }
 }
 exports.Info = Info

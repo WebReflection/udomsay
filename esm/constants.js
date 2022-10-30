@@ -6,5 +6,4 @@ export const NODE = 'string';
 export const OBJECT = 'object';
 export const UDOMSAY = '<!--🙊-->';
 
-export const all = [];
 export const empty = [];

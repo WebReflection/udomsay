@@ -12,7 +12,5 @@ exports.OBJECT = OBJECT;
 const UDOMSAY = '<!--🙊-->';
 exports.UDOMSAY = UDOMSAY;
 
-const all = [];
-exports.all = all;
 const empty = [];
 exports.empty = empty;
