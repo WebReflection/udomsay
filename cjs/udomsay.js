@@ -331,13 +331,9 @@ function parseContent() {
   ];
 }
 
-const templates = new WeakMap;
-const parseNode = (__token, type, args) => {
-  let contentDetails = templates.get(__token);
-  if (!contentDetails)
-    templates.set(__token, contentDetails = parseContent.apply(type, args));
-  return contentDetails;
-};
+const parseNode = (__token, type, args) => (
+  __token.info || (__token.info = parseContent.apply(type, args))
+);
 
 const populateInfo = (info, __token, value) => {
   info.__token = __token;
