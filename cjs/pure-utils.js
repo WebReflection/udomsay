@@ -24,17 +24,26 @@ const dontIgnoreKey = key => {
 };
 exports.dontIgnoreKey = dontIgnoreKey;
 
-const getChild = (args, i) => args[i].args;
+const getChild = (child, args) => {
+  for (let i = 0; i < child.length; i++)
+    args = args[child[i]].args;
+  return args;
+};
 exports.getChild = getChild;
 
-const getHole = (child, length, args) => {
+const getHole = (child, args) => {
+  const length = child.length - 1;
   for (let i = 0; i < length; i++)
-    ({args} = args[child[i]]);
+    args = args[child[i]].args;
   return args[child[length]].value;
 };
 exports.getHole = getHole;
 
-const getNode = ({childNodes}, i) => childNodes[i];
+const getNode = (tree, node) => {
+  for (let i = 0; i < tree.length; i++)
+    node = node.childNodes[tree[i]];
+  return node;
+};
 exports.getNode = getNode;
 
 const properties = new Map;
