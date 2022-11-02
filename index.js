@@ -152,7 +152,7 @@ const effect$1 = (callback, value, options = defaults) => {
     // think the amount of code needed to understand if a callback is *likely*
     // the same as before makes any sense + correctness would be trashed.
     if (i === e.length || e[i]._ !== callback)
-      e[i] = new Effect(callback, value, options);
+      (e[i] = new Effect(callback, value, options)).value;
     unique = e[i];
     outerEffect.i++;
   }
