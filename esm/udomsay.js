@@ -213,22 +213,30 @@ const parseComponent = args => {
   return [store, parseNode(resultArgs[1].__token, type, resultArgs)];
 };
 
-const parseContent = (type, args) => {
-  const {html, fragment, details} = (
-    new Info(type, empty, empty, [], []).parse(args)
-  );
-  const template = document.createElement('template');
-  template.innerHTML = html.join('');
-  const {content} = template;
-  return [
-    fragment ? content : content.childNodes[0],
-    details
-  ];
+const parseNode = (__token, type, args) => {
+  let {info} = __token;
+  if (!info) {
+    const {html, fragment, details} = (
+      __token.ops ?
+        {
+          html: [__token.html],
+          fragment: type === FRAGMENT,
+          details: __token.ops
+        } :
+        new Info(type, empty, empty, [], []).parse(args)
+    );
+    const template = document.createElement('template');
+    template.innerHTML = html.join('');
+    const {content} = template;
+    __token.info = (
+      info = [
+        fragment ? content : content.childNodes[0],
+        details
+      ]
+    );
+  }
+  return info;
 };
-
-const parseNode = (__token, type, args) => (
-  __token.info || (__token.info = parseContent(type, args))
-);
 
 const populateInfo = (info, __token, value) => {
   info.__token = __token;
