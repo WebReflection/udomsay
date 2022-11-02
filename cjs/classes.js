@@ -10,7 +10,6 @@ const {
   NODE,
   OBJECT,
   UDOMSAY,
-  all,
   empty
 } = require('./constants.js');
 
@@ -79,7 +78,7 @@ function createDetails(entry, props) {
         const {is} = props;
         if (is) html.push(` is="${is}"`);
         if (props instanceof Interpolation)
-          this.push(all);
+          this.push(empty);
         else {
           const runtime = [];
           for (const [key, value] of entries(props)) {
@@ -107,7 +106,7 @@ function createDetails(entry, props) {
       return 1;
     case COMPONENT:
       html.push(UDOMSAY);
-      this.push(empty);
+      this.push(null);
       return 1;
     case FRAGMENT:
       return mapChildren.apply(this, arguments);
@@ -124,7 +123,7 @@ function mapChildren(_, props) {
     if (typeof arg === OBJECT) {
       if (arg instanceof Interpolation) {
         html.push(UDOMSAY);
-        this.push(empty, true, child.concat(i), getTree(root, tree, index++));
+        this.push(null, true, child.concat(i), getTree(root, tree, index++));
       }
       else {
         const {type, args} = arg;
@@ -185,7 +184,7 @@ class ComponentStore extends Store {
   constructor(args) {
     super(args);
     this.init = true;
-    this.keys = empty;
+    this.keys = null;
     this.result = null; // TODO: redundant as set in the sync effect?
     this.dispose = effect(() => {
       const {init, args} = this;
@@ -195,18 +194,19 @@ class ComponentStore extends Store {
         // map interpolations passed as props to components
         if (props) {
           if (props instanceof Interpolation) {
-            this.keys = all;
+            this.keys = empty;
             props = props.value;
           }
           else {
-            let keys = empty;
+            const runtime = [];
             for (const [key, value] of entries(props)) {
               if (value instanceof Interpolation) {
-                (keys === empty ? (keys = []) : keys).push(key);
+                runtime.push(key);
                 props[key] = value.value;
               }
             }
-            this.keys = keys;
+            if (runtime.length)
+              this.keys = runtime;
           }
         }
       }
@@ -219,9 +219,9 @@ class ComponentStore extends Store {
     if (args !== this.args) {
       let [component, props, ...children] = (this.args = args);
       const {keys} = this;
-      if (keys === all)
+      if (keys === empty)
         props = props.value;
-      else if (keys !== empty) {
+      else if (keys) {
         for (const key of keys)
           props[key] = props[key].value;
       }

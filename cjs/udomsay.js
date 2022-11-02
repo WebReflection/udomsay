@@ -6,7 +6,6 @@ const {
   FRAGMENT,
   NODE,
   OBJECT,
-  all,
   empty
 } = require('./constants.js');
 
@@ -70,8 +69,29 @@ exports.useDocument = useDocument;
 const createUpdates = (container, details, updates) => {
   for (const {child, tree, props, hole} of details) {
     const node = getNode(tree, container);
+    // attributes
+    if (props) {
+      const prev = {};
+      updates.push(
+        props.length ?
+        // static props
+        args => {
+          const values = getChild(child, args)[1];
+          for (const key of props)
+            setProperty(node, key, values[key].value, prev);
+        } :
+        // props as interpolation
+        args => {
+          const values = getChild(child, args)[1].value;
+          for (const [key, value] of entries(values)) {
+            if (dontIgnoreKey(key))
+              setProperty(node, key, value, prev);
+          }
+        }
+      );
+    }
     // holes or static components
-    if (props === empty) {
+    else {
       const index = updates.push(hole ?
         // fine-tune the kind of update that's needed in the future
         args => {
@@ -178,25 +198,6 @@ const createUpdates = (container, details, updates) => {
           store.update();
         }
       ) - 1;
-    }
-    // attributes
-    else {
-      const prev = {};
-      updates.push(
-        props === all ?
-        args => {
-          const values = getChild(child, args)[1].value;
-          for (const [key, value] of entries(values)) {
-            if (dontIgnoreKey(key))
-              setProperty(node, key, value, prev);
-          }
-        } :
-        args => {
-          const values = getChild(child, args)[1];
-          for (const key of props)
-            setProperty(node, key, values[key].value, prev);
-        }
-      );
     }
   }
 };
