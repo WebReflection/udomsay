@@ -81,14 +81,33 @@ const computed = (fn, value, options = defaults) =>
                           new Computed(fn, value, options, false);
 
 let outerEffect;
+const empty$1 = [];
 const noop = () => {};
 const dispose = ({s}) => {
   if (typeof s._ === 'function')
     s._ = s._();
 };
-class Effect extends Computed {
+
+class FX extends Computed {
   constructor(_, v, o) {
     super(_, v, o, true);
+    this.e = empty$1;
+  }
+  run() {
+    this.$ = true;
+    this.value;
+    return this;
+  }
+  stop() {
+    this._ = noop;
+    this.r.clear();
+    this.s.c.clear();
+  }
+}
+
+class Effect extends FX {
+  constructor(_, v, o) {
+    super(_, v, o);
     this.i = 0;         // index
     this.a = !!o.async; // async
     this.m = true;      // microtask
@@ -109,26 +128,14 @@ class Effect extends Computed {
   }
   sync() {
     const prev = outerEffect;
-    const {e} = (outerEffect = this);
-    this.i = 0;
+    (outerEffect = this).i = 0;
     dispose(this);
     super.value;
-    // if effects are present in loops, these can grow or shrink.
-    // when these grow, there's nothing to do, as well as when these are
-    // still part of the loop, as the callback gets updated anyway.
-    // however, if there were more effects before but none now, those can
-    // just stop being referenced and go with the GC.
-    if (this.i < e.length)
-      for (const effect of e.splice(this.i))
-        effect.stop();
-    for (const {value} of e);
     outerEffect = prev;
   }
   stop() {
+    super.stop();
     dispose(this);
-    this._ = noop;
-    this.r.clear();
-    this.s.c.clear();
     for (const effect of this.e.splice(0))
       effect.stop();
   }
@@ -141,23 +148,26 @@ class Effect extends Computed {
  * @template T
  * @type {<T>(fn: (v: T) => T, value?: T, options?: { async?: boolean }) => () => void}
  */
-const effect$1 = (callback, value, options = defaults) => {
+const effect$2 = (callback, value, options = defaults) => {
   let unique;
   if (outerEffect) {
     const {i, e} = outerEffect;
+    const isNew = i === e.length;
     // bottleneck:
     // there's literally no way to optimize this path *unless* the callback is
     // already a known one. however, latter case is not really common code so
     // the question is: should I optimize this more than this? 'cause I don't
     // think the amount of code needed to understand if a callback is *likely*
     // the same as before makes any sense + correctness would be trashed.
-    if (i === e.length || e[i]._ !== callback)
-      (e[i] = new Effect(callback, value, options)).value;
+    if (isNew || e[i]._ !== callback) {
+      if (!isNew) e[i].stop();
+      e[i] = new Effect(callback, value, options).run();
+    }
     unique = e[i];
     outerEffect.i++;
   }
   else
-    (unique = new Effect(callback, value, options)).value;
+    unique = new Effect(callback, value, options).run();
   return () => { unique.stop(); };
 };
 
@@ -217,7 +227,7 @@ class Reactive extends Signal {
  */
 const signal = (value, options = defaults) => new Reactive(value, options);
 
-const options = {async: false};
+const options$1 = {async: false};
 
 /**
  * Invokes synchronously a function when any of its internal signals or computed values change.
@@ -226,7 +236,7 @@ const options = {async: false};
  * @template T
  * @type {<T>(fn: (v?: T) => T?, value?: T) => () => void 0}
  */
-const effect = (fn, value) => effect$1(fn, value, options);
+const effect$1 = (fn, value) => effect$2(fn, value, options$1);
 
 /*! (c) Andrea Giammarchi - ISC */
 
@@ -274,6 +284,12 @@ const dontIgnoreKey = key => {
       return false;
   }
   return true;
+};
+
+const options = {async: false, equals: true};
+const effect = (fn, light) => {
+  const Class = light ? FX : Effect;
+  return new Class(fn, void 0, options).run();
 };
 
 const getChild = (child, args) => {
@@ -593,8 +609,8 @@ class HoleInfo {
   constructor() {
     this.__token = null;
     this.store = null;
-    this.nodes = empty;
   }
+  get nodes() { return this.store.nodes }
 }
 
 class KeyedHoleInfo extends HoleInfo {
@@ -604,75 +620,80 @@ class KeyedHoleInfo extends HoleInfo {
 }
 
 class Store {
-  constructor(args) {
-    this.args = args;
-    this.updates = [];
+  constructor(args, updates, nodes) {
+    this.args = null;
+    this.nodes = nodes;
+    this.updates = updates;
+    this.refresh(args);
   }
   refresh(args) {
-    if (args !== this.args) {
+    if (this.args !== args) {
       this.args = args;
-      this.update();
+      for (const update of this.updates)
+        update(this.args);
     }
-  }
-  update() {
-    for (const update of this.updates)
-      update(this.args);
   }
 }
 
-class ComponentStore extends Store {
-  constructor(args) {
-    super(args);
+class ComponentStore {
+  constructor(args, parseNode, getNodes) {
+    this.args = args;
+    this.calc = false;
     this.init = true;
     this.keys = null;
-    this.result = null; // TODO: redundant as set in the sync effect?
-    this.dispose = effect(() => {
-      const {init, args} = this;
-      let [component, props, ...children] = args;
-      if (init) {
-        this.init = false;
-        // map interpolations passed as props to components
-        if (props) {
-          if (props instanceof Interpolation) {
-            this.keys = empty;
-            props = props.value;
-          }
-          else {
-            const runtime = [];
-            for (const [key, value] of entries(props)) {
-              if (value instanceof Interpolation) {
-                runtime.push(key);
-                props[key] = value.value;
-              }
+    this.effect = effect(
+      () => {
+        const {args, calc, init, keys} = this;
+        let [component, props, ...children] = args;
+        if (init) {
+          this.init = false;
+          // map interpolations passed as props to components
+          if (props) {
+            if (props instanceof Interpolation) {
+              this.keys = empty;
+              props = props.value;
             }
-            if (runtime.length)
-              this.keys = runtime;
+            else {
+              const runtime = [];
+              for (const [key, value] of entries(props)) {
+                if (value instanceof Interpolation) {
+                  runtime.push(key);
+                  props[key] = value.value;
+                }
+              }
+              if (runtime.length)
+                this.keys = runtime;
+            }
           }
         }
-      }
-      this.result = component(props, ...children);
-      if (!init)
-        this.update();
-    });
+        else if (calc) {
+          this.calc = false;
+          if (keys === empty)
+            props = props.value;
+          else if (keys) {
+            for (const key of keys)
+              props[key] = props[key].value;
+          }
+        }
+        this.result = component(props, ...children);
+        if (init) {
+          const {type, args} = this.result;
+          const [content, details] = parseNode(args[1].__token, type, args);
+          this.nodes = getNodes(content, details, this.updates = [], type !== FRAGMENT);
+        }
+        for (const update of this.updates)
+          update(this.result.args);
+      },
+      false
+    );
   }
   refresh(args) {
-    if (args !== this.args) {
-      let [component, props, ...children] = (this.args = args);
-      const {keys} = this;
-      if (keys === empty)
-        props = props.value;
-      else if (keys) {
-        for (const key of keys)
-          props[key] = props[key].value;
-      }
-      this.result = component(props, ...children);
-      this.update();
+    if (this.args !== args) {
+      this.args = args;
+      this.calc = true;
+      // TODO: maybe add a run() method instead?
+      this.effect.run();
     }
-  }
-  update() {
-    const {updates, result: {args}} = this;
-    for (const update of updates)
-      update(args);
   }
 }
 
@@ -779,11 +800,6 @@ const createUpdates = (container, details, updates) => {
                   array.push(...info.nodes);
                 }
                 if (i) {
-                  // TODO: dispose?
-                  if (isKeyed) {
-                    for (; i < length; i++)
-                      delete keys[stack[i].key];
-                  }
                   nodes = diff(parentNode, nodes, array, node);
                   stack = newStack;
                 }
@@ -806,14 +822,14 @@ const createUpdates = (container, details, updates) => {
             else {
               const isSignal = value instanceof Signal;
               // signal with primitive value
-              if (isSignal && (typeof value.value !== OBJECT))
+              if (isSignal && (typeof value.peek() !== OBJECT))
                 updates[index] = useDataUpdate(child, node, value, true);
               // every other case
               else {
                 const {parentNode} = node;
                 const info = new HoleInfo;
                 (updates[index] = (args, hole = getHole(child, args)) => {
-                  const value = isSignal ? hole.value : hole;
+                  const value = asValue(hole, isSignal);
                   const {__token} = value.args[1];
                   if (__token === info.__token)
                     refresh(info, value);
@@ -832,12 +848,11 @@ const createUpdates = (container, details, updates) => {
         } :
         // static component case
         args => {
-          const [store, [content, details]] = parseComponent(getChild(child, args));
-          node.replaceWith(importNode(content, details, store.updates));
+          const store = createComponentStore(getChild(child, args));
+          node.replaceWith(...store.nodes);
           updates[index] = args => {
             store.refresh(getChild(child, args));
           };
-          store.update();
         }
       ) - 1;
     }
@@ -855,11 +870,7 @@ const importNode = (content, details, updates) => {
   return container;
 };
 
-const parseComponent = args => {
-  const store = new ComponentStore(args);
-  const {type, args: resultArgs} = store.result;
-  return [store, parseNode(resultArgs[1].__token, type, resultArgs)];
-};
+const createComponentStore = args => new ComponentStore(args, parseNode, getNodes);
 
 const parseNode = (__token, type, args) => {
   let {info} = __token;
@@ -886,34 +897,48 @@ const parseNode = (__token, type, args) => {
   return info;
 };
 
-const populateInfo = (info, __token, value) => {
+const populateInfo = (info, __token, {type, args}) => {
   info.__token = __token;
-  if (value.type === COMPONENT) {
-    const [store, [content, details]] = parseComponent(value.args);
-    const {result, updates} = (info.store = store);
-    info.nodes = getNodes(content, details, updates, result.type !== FRAGMENT);
+  if (type === COMPONENT)
+    info.store = createComponentStore(args);
+  else {
+    const updates = [];
+    const [content, details] = parseNode(__token, type, args);
+    const nodes = getNodes(content, details, updates, type === NODE);
+    info.store = new Store(args, updates, nodes);
   }
-  else
-    setStore(info, __token, value, value.type === NODE);
-  info.store.update();
 };
 
 const refresh = ({store}, {args}) => {
   store.refresh(args);
 };
 
-const setStore = (info, __token, {type, args}, isNode) => {
-  const [content, details] = parseNode(__token, type, args);
-  const {updates} = (info.store = new Store(args));
-  info.nodes = getNodes(content, details, updates, isNode);
-};
-
 const useDataUpdate = (child, node, value, isSignal) => {
-  const text = document.createTextNode(asValue(value, isSignal));
+  let prev = isSignal ? value : asValue(value, isSignal);
+  const text = document.createTextNode(isSignal ? '' : prev);
   node.replaceWith(text);
+  if (isSignal) {
+    const fx = effect(
+      () => {
+        text.data = asValue(prev, isSignal);
+      },
+      true
+    );
+    return args => {
+      const current = getHole(child, args);
+      if (current !== prev) {
+        prev = current;
+        fx.run();
+      }
+    };
+  }
   return args => {
-    text.data = asValue(getHole(child, args), isSignal);
+    const current = asValue(getHole(child, args), isSignal);
+    if (current !== prev) {
+      prev = current;
+      text.data = current;
+    }
   };
 };
 
-export { Fragment, Signal, batch, computed, createElement, effect, interpolation, render, signal, useDocument, useProperty };
+export { Effect, FX, Fragment, Signal, batch, computed, createElement, effect$1 as effect, interpolation, render, signal, useDocument, useProperty };

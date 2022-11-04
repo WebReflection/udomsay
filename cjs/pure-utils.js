@@ -1,6 +1,8 @@
 'use strict';
 /*! (c) Andrea Giammarchi - ISC */
 
+const {Effect, FX} = require('usignal');
+
 const {isArray} = Array;
 const {entries} = Object;
 
@@ -23,6 +25,13 @@ const dontIgnoreKey = key => {
   return true;
 };
 exports.dontIgnoreKey = dontIgnoreKey;
+
+const options = {async: false, equals: true};
+const effect = (fn, light) => {
+  const Class = light ? FX : Effect;
+  return new Class(fn, void 0, options).run();
+};
+exports.effect = effect;
 
 const getChild = (child, args) => {
   for (let i = 0; i < child.length; i++)

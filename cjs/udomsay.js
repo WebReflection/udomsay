@@ -22,6 +22,7 @@ const {
 const {
   asValue,
   diff,
+  effect,
   entries,
   dontIgnoreKey,
   getChild,
@@ -137,11 +138,6 @@ const createUpdates = (container, details, updates) => {
                   array.push(...info.nodes);
                 }
                 if (i) {
-                  // TODO: dispose?
-                  if (isKeyed) {
-                    for (; i < length; i++)
-                      delete keys[stack[i].key];
-                  }
                   nodes = diff(parentNode, nodes, array, node);
                   stack = newStack;
                 }
@@ -164,14 +160,14 @@ const createUpdates = (container, details, updates) => {
             else {
               const isSignal = value instanceof Signal;
               // signal with primitive value
-              if (isSignal && (typeof value.value !== OBJECT))
+              if (isSignal && (typeof value.peek() !== OBJECT))
                 updates[index] = useDataUpdate(child, node, value, true);
               // every other case
               else {
                 const {parentNode} = node;
                 const info = new HoleInfo;
                 (updates[index] = (args, hole = getHole(child, args)) => {
-                  const value = isSignal ? hole.value : hole;
+                  const value = asValue(hole, isSignal);
                   const {__token} = value.args[1];
                   if (__token === info.__token)
                     refresh(info, value);
@@ -190,12 +186,11 @@ const createUpdates = (container, details, updates) => {
         } :
         // static component case
         args => {
-          const [store, [content, details]] = parseComponent(getChild(child, args));
-          node.replaceWith(importNode(content, details, store.updates));
+          const store = createComponentStore(getChild(child, args));
+          node.replaceWith(...store.nodes);
           updates[index] = args => {
             store.refresh(getChild(child, args));
           };
-          store.update();
         }
       ) - 1;
     }
@@ -213,11 +208,7 @@ const importNode = (content, details, updates) => {
   return container;
 };
 
-const parseComponent = args => {
-  const store = new ComponentStore(args);
-  const {type, args: resultArgs} = store.result;
-  return [store, parseNode(resultArgs[1].__token, type, resultArgs)];
-};
+const createComponentStore = args => new ComponentStore(args, parseNode, getNodes);
 
 const parseNode = (__token, type, args) => {
   let {info} = __token;
@@ -244,32 +235,46 @@ const parseNode = (__token, type, args) => {
   return info;
 };
 
-const populateInfo = (info, __token, value) => {
+const populateInfo = (info, __token, {type, args}) => {
   info.__token = __token;
-  if (value.type === COMPONENT) {
-    const [store, [content, details]] = parseComponent(value.args);
-    const {result, updates} = (info.store = store);
-    info.nodes = getNodes(content, details, updates, result.type !== FRAGMENT);
+  if (type === COMPONENT)
+    info.store = createComponentStore(args);
+  else {
+    const updates = [];
+    const [content, details] = parseNode(__token, type, args);
+    const nodes = getNodes(content, details, updates, type === NODE);
+    info.store = new Store(args, updates, nodes);
   }
-  else
-    setStore(info, __token, value, value.type === NODE);
-  info.store.update();
 };
 
 const refresh = ({store}, {args}) => {
   store.refresh(args);
 };
 
-const setStore = (info, __token, {type, args}, isNode) => {
-  const [content, details] = parseNode(__token, type, args);
-  const {updates} = (info.store = new Store(args));
-  info.nodes = getNodes(content, details, updates, isNode);
-};
-
 const useDataUpdate = (child, node, value, isSignal) => {
-  const text = document.createTextNode(asValue(value, isSignal));
+  let prev = isSignal ? value : asValue(value, isSignal);
+  const text = document.createTextNode(isSignal ? '' : prev);
   node.replaceWith(text);
+  if (isSignal) {
+    const fx = effect(
+      () => {
+        text.data = asValue(prev, isSignal);
+      },
+      true
+    );
+    return args => {
+      const current = getHole(child, args);
+      if (current !== prev) {
+        prev = current;
+        fx.run();
+      }
+    };
+  }
   return args => {
-    text.data = asValue(getHole(child, args), isSignal);
+    const current = asValue(getHole(child, args), isSignal);
+    if (current !== prev) {
+      prev = current;
+      text.data = current;
+    }
   };
 };

@@ -42,7 +42,7 @@
   "unpkg": "es.js",
   "dependencies": {
     "domconstants": "^1.0.0",
-    "usignal": "^0.8.2"
+    "usignal": "^0.8.9"
   },
   "repository": {
     "type": "git",

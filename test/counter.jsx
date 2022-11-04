@@ -6,13 +6,13 @@ import {
   createElement as C,
   Fragment as F,
   interpolation as I
-} from '../es.js';
+} from '../index.js';
 
 function Counter({clicks}) {
   return (
     <div>
       <button onclick={() => { clicks.value--; }}>-</button>
-      <span>{clicks.value}</span>
+      <span>{clicks}</span>
       <button onclick={() => { clicks.value++; }}>+</button>
     </div>
   );

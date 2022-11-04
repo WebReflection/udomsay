@@ -1,5 +1,7 @@
 /*! (c) Andrea Giammarchi - ISC */
 
+import {Effect, FX} from 'usignal';
+
 const {isArray} = Array;
 const {entries} = Object;
 
@@ -18,6 +20,12 @@ export const dontIgnoreKey = key => {
       return false;
   }
   return true;
+};
+
+const options = {async: false, equals: true};
+export const effect = (fn, light) => {
+  const Class = light ? FX : Effect;
+  return new Class(fn, void 0, options).run();
 };
 
 export const getChild = (child, args) => {

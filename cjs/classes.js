@@ -2,7 +2,6 @@
 /*! (c) Andrea Giammarchi - ISC */
 
 const {VOID_ELEMENTS} = require('domconstants');
-const {effect} = require('usignal');
 
 const {
   COMPONENT,
@@ -16,6 +15,7 @@ const {
 const {escape} = require('./html-escaper.js');
 
 const {
+  effect,
   entries,
   dontIgnoreKey
 } = require('./pure-utils.js');
@@ -150,8 +150,8 @@ class HoleInfo {
   constructor() {
     this.__token = null;
     this.store = null;
-    this.nodes = empty;
   }
+  get nodes() { return this.store.nodes }
 }
 exports.HoleInfo = HoleInfo
 
@@ -163,76 +163,81 @@ class KeyedHoleInfo extends HoleInfo {
 exports.KeyedHoleInfo = KeyedHoleInfo
 
 class Store {
-  constructor(args) {
-    this.args = args;
-    this.updates = [];
+  constructor(args, updates, nodes) {
+    this.args = null;
+    this.nodes = nodes;
+    this.updates = updates;
+    this.refresh(args);
   }
   refresh(args) {
-    if (args !== this.args) {
+    if (this.args !== args) {
       this.args = args;
-      this.update();
+      for (const update of this.updates)
+        update(this.args);
     }
-  }
-  update() {
-    for (const update of this.updates)
-      update(this.args);
   }
 }
 exports.Store = Store
 
-class ComponentStore extends Store {
-  constructor(args) {
-    super(args);
+class ComponentStore {
+  constructor(args, parseNode, getNodes) {
+    this.args = args;
+    this.calc = false;
     this.init = true;
     this.keys = null;
-    this.result = null; // TODO: redundant as set in the sync effect?
-    this.dispose = effect(() => {
-      const {init, args} = this;
-      let [component, props, ...children] = args;
-      if (init) {
-        this.init = false;
-        // map interpolations passed as props to components
-        if (props) {
-          if (props instanceof Interpolation) {
-            this.keys = empty;
-            props = props.value;
-          }
-          else {
-            const runtime = [];
-            for (const [key, value] of entries(props)) {
-              if (value instanceof Interpolation) {
-                runtime.push(key);
-                props[key] = value.value;
-              }
+    this.effect = effect(
+      () => {
+        const {args, calc, init, keys} = this;
+        let [component, props, ...children] = args;
+        if (init) {
+          this.init = false;
+          // map interpolations passed as props to components
+          if (props) {
+            if (props instanceof Interpolation) {
+              this.keys = empty;
+              props = props.value;
             }
-            if (runtime.length)
-              this.keys = runtime;
+            else {
+              const runtime = [];
+              for (const [key, value] of entries(props)) {
+                if (value instanceof Interpolation) {
+                  runtime.push(key);
+                  props[key] = value.value;
+                }
+              }
+              if (runtime.length)
+                this.keys = runtime;
+            }
           }
         }
-      }
-      this.result = component(props, ...children);
-      if (!init)
-        this.update();
-    });
+        else if (calc) {
+          this.calc = false;
+          if (keys === empty)
+            props = props.value;
+          else if (keys) {
+            for (const key of keys)
+              props[key] = props[key].value;
+          }
+        }
+        this.result = component(props, ...children);
+        if (init) {
+          const {type, args} = this.result;
+          const [content, details] = parseNode(args[1].__token, type, args);
+          this.nodes = getNodes(content, details, this.updates = [], type !== FRAGMENT);
+        }
+        for (const update of this.updates)
+          update(this.result.args);
+      },
+      false
+    );
   }
   refresh(args) {
-    if (args !== this.args) {
-      let [component, props, ...children] = (this.args = args);
-      const {keys} = this;
-      if (keys === empty)
-        props = props.value;
-      else if (keys) {
-        for (const key of keys)
-          props[key] = props[key].value;
-      }
-      this.result = component(props, ...children);
-      this.update();
+    if (this.args !== args) {
+      this.args = args;
+      this.calc = true;
+      // TODO: maybe add a run() method instead?
+      this.effect.run();
     }
-  }
-  update() {
-    const {updates, result: {args}} = this;
-    for (const update of updates)
-      update(args);
   }
 }
 exports.ComponentStore = ComponentStore
