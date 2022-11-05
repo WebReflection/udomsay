@@ -21,8 +21,8 @@ const {
 const {
   asValue,
   diff,
-  effect,
   entries,
+  fx,
   dontIgnoreKey,
   getChild,
   getHole,
@@ -251,17 +251,14 @@ const useDataUpdate = (child, node, value, isSignal) => {
   const text = document.createTextNode(isSignal ? '' : value);
   node.replaceWith(text);
   if (isSignal) {
-    const fx = effect(
-      () => {
-        text.data = asValue(value, isSignal);
-      },
-      true
-    );
+    const atomic = fx(() => {
+      text.data = asValue(value, isSignal);
+    });
     return args => {
       const current = getHole(child, args);
       if (current !== value) {
         value = current;
-        fx.run();
+        atomic.run();
       }
     };
   }

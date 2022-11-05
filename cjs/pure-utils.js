@@ -27,13 +27,9 @@ const dontIgnoreKey = key => {
 exports.dontIgnoreKey = dontIgnoreKey;
 
 const options = {async: false, equals: true};
-const effect = (fn, light) => {
-  const Class = light ? FX : Effect;
-  return new Class(fn, void 0, options).run();
-};
+const effect = fn => new Effect(fn, void 0, options).run();
 exports.effect = effect;
-
-const fx = fn => effect(fn, true);
+const fx = fn => new FX(fn, void 0, options).run();
 exports.fx = fx;
 
 const getChild = (child, args) => {

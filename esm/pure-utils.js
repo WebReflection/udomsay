@@ -23,12 +23,8 @@ export const dontIgnoreKey = key => {
 };
 
 const options = {async: false, equals: true};
-export const effect = (fn, light) => {
-  const Class = light ? FX : Effect;
-  return new Class(fn, void 0, options).run();
-};
-
-export const fx = fn => effect(fn, true);
+export const effect = fn => new Effect(fn, void 0, options).run();
+export const fx = fn => new FX(fn, void 0, options).run();
 
 export const getChild = (child, args) => {
   for (let i = 0; i < child.length; i++)

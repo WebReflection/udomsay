@@ -287,12 +287,8 @@ const dontIgnoreKey = key => {
 };
 
 const options = {async: false, equals: true};
-const effect = (fn, light) => {
-  const Class = light ? FX : Effect;
-  return new Class(fn, void 0, options).run();
-};
-
-const fx = fn => effect(fn, true);
+const effect = fn => new Effect(fn, void 0, options).run();
+const fx = fn => new FX(fn, void 0, options).run();
 
 const getChild = (child, args) => {
   for (let i = 0; i < child.length; i++)
@@ -643,51 +639,48 @@ class ComponentStore {
     this.calc = false;
     this.init = true;
     this.keys = null;
-    this.effect = effect(
-      () => {
-        const {args, calc, init, keys} = this;
-        let [component, props, ...children] = args;
-        if (init) {
-          this.init = false;
-          // map interpolations passed as props to components
-          if (props) {
-            if (props instanceof Interpolation) {
-              this.keys = empty;
-              props = props.value;
-            }
-            else {
-              const runtime = [];
-              for (const [key, value] of entries(props)) {
-                if (value instanceof Interpolation) {
-                  runtime.push(key);
-                  props[key] = value.value;
-                }
-              }
-              if (runtime.length)
-                this.keys = runtime;
-            }
-          }
-        }
-        else if (calc) {
-          this.calc = false;
-          if (keys === empty)
+    this.effect = effect(() => {
+      const {args, calc, init, keys} = this;
+      let [component, props, ...children] = args;
+      if (init) {
+        this.init = false;
+        // map interpolations passed as props to components
+        if (props) {
+          if (props instanceof Interpolation) {
+            this.keys = empty;
             props = props.value;
-          else if (keys) {
-            for (const key of keys)
-              props[key] = props[key].value;
+          }
+          else {
+            const runtime = [];
+            for (const [key, value] of entries(props)) {
+              if (value instanceof Interpolation) {
+                runtime.push(key);
+                props[key] = value.value;
+              }
+            }
+            if (runtime.length)
+              this.keys = runtime;
           }
         }
-        this.result = component(props, ...children);
-        if (init) {
-          const {type, args} = this.result;
-          const [content, details] = parseNode(args[1].__token, type, args);
-          this.nodes = getNodes(content, details, this.updates = [], type !== FRAGMENT);
+      }
+      else if (calc) {
+        this.calc = false;
+        if (keys === empty)
+          props = props.value;
+        else if (keys) {
+          for (const key of keys)
+            props[key] = props[key].value;
         }
-        for (const update of this.updates)
-          update(this.result.args);
-      },
-      false
-    );
+      }
+      this.result = component(props, ...children);
+      if (init) {
+        const {type, args} = this.result;
+        const [content, details] = parseNode(args[1].__token, type, args);
+        this.nodes = getNodes(content, details, this.updates = [], type !== FRAGMENT);
+      }
+      for (const update of this.updates)
+        update(this.result.args);
+    });
   }
   refresh(args) {
     if (this.args !== args) {
@@ -911,17 +904,14 @@ const useDataUpdate = (child, node, value, isSignal) => {
   const text = document.createTextNode(isSignal ? '' : value);
   node.replaceWith(text);
   if (isSignal) {
-    const fx = effect(
-      () => {
-        text.data = asValue(value, isSignal);
-      },
-      true
-    );
+    const atomic = fx(() => {
+      text.data = asValue(value, isSignal);
+    });
     return args => {
       const current = getHole(child, args);
       if (current !== value) {
         value = current;
-        fx.run();
+        atomic.run();
       }
     };
   }
