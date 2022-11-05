@@ -844,7 +844,7 @@ const createUpdates = (container, details, updates) => {
           }
           // primitive value
           else
-            updates[index] = useDataUpdate(child, node, value, false);
+            updates[index] = useDataUpdate(child, node, asValue(value, false), false);
         } :
         // static component case
         args => {
@@ -875,21 +875,14 @@ const createComponentStore = args => new ComponentStore(args, parseNode, getNode
 const parseNode = (__token, type, args) => {
   let {info} = __token;
   if (!info) {
-    const {html, fragment, details} = (
-      __token.ops ?
-        {
-          html: [__token.html],
-          fragment: type === FRAGMENT,
-          details: __token.ops
-        } :
-        new Info(type, empty, empty, [], []).parse(args)
-    );
+    const {html, fragment, details} =
+      new Info(type, empty, empty, [], []).parse(args);
     const template = document.createElement('template');
     template.innerHTML = html.join('');
     const {content} = template;
     __token.info = (
       info = [
-        fragment ? content : content.childNodes[0],
+        fragment ? content : content.firstChild,
         details
       ]
     );
@@ -914,28 +907,27 @@ const refresh = ({store}, {args}) => {
 };
 
 const useDataUpdate = (child, node, value, isSignal) => {
-  let prev = isSignal ? value : asValue(value, isSignal);
-  const text = document.createTextNode(isSignal ? '' : prev);
+  const text = document.createTextNode(isSignal ? '' : value);
   node.replaceWith(text);
   if (isSignal) {
     const fx = effect(
       () => {
-        text.data = asValue(prev, isSignal);
+        text.data = asValue(value, isSignal);
       },
       true
     );
     return args => {
       const current = getHole(child, args);
-      if (current !== prev) {
-        prev = current;
+      if (current !== value) {
+        value = current;
         fx.run();
       }
     };
   }
   return args => {
     const current = asValue(getHole(child, args), isSignal);
-    if (current !== prev) {
-      prev = current;
+    if (current !== value) {
+      value = current;
       text.data = current;
     }
   };
