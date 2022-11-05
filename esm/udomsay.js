@@ -30,7 +30,7 @@ import {
   setProperty
 } from './pure-utils.js';
 
-export {fx, useProperty} from './pure-utils.js';
+export {useProperty} from './pure-utils.js';
 
 export const Fragment = Symbol();
 

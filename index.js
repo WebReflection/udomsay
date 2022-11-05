@@ -924,4 +924,4 @@ const useDataUpdate = (child, node, value, isSignal) => {
   };
 };
 
-export { Effect, FX, Fragment, Signal, batch, computed, createElement, effect$1 as effect, fx, interpolation, render, signal, useDocument, useProperty };
+export { Effect, FX, Fragment, Signal, batch, computed, createElement, effect$1 as effect, interpolation, render, signal, useDocument, useProperty };

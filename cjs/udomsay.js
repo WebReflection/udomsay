@@ -32,7 +32,6 @@ const {
 } = require('./pure-utils.js');
 
 (m => {
-  exports.fx = m.fx;
   exports.useProperty = m.useProperty;
 })(require('./pure-utils.js'));
 
