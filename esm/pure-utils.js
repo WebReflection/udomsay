@@ -28,6 +28,8 @@ export const effect = (fn, light) => {
   return new Class(fn, void 0, options).run();
 };
 
+export const fx = fn => effect(fn, true);
+
 export const getChild = (child, args) => {
   for (let i = 0; i < child.length; i++)
     args = args[child[i]].args;

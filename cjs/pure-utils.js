@@ -33,6 +33,9 @@ const effect = (fn, light) => {
 };
 exports.effect = effect;
 
+const fx = fn => effect(fn, true);
+exports.fx = fx;
+
 const getChild = (child, args) => {
   for (let i = 0; i < child.length; i++)
     args = args[child[i]].args;

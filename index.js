@@ -292,6 +292,8 @@ const effect = (fn, light) => {
   return new Class(fn, void 0, options).run();
 };
 
+const fx = fn => effect(fn, true);
+
 const getChild = (child, args) => {
   for (let i = 0; i < child.length; i++)
     args = args[child[i]].args;
@@ -932,4 +934,4 @@ const useDataUpdate = (child, node, value, isSignal) => {
   };
 };
 
-export { Effect, FX, Fragment, Signal, batch, computed, createElement, effect$1 as effect, interpolation, render, signal, useDocument, useProperty };
+export { Effect, FX, Fragment, Signal, batch, computed, createElement, effect$1 as effect, fx, interpolation, render, signal, useDocument, useProperty };
