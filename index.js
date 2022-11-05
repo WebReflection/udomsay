@@ -710,16 +710,15 @@ const interpolation = value => new Interpolation(value);
 const renders = new WeakMap;
 const render = (what, where) => {
   if (typeof what === COMPONENT) what = what();
-  const {type, args} = what;
-  const {__token} = args[1];
+  const {__token} = what.args[1];
   let info = renders.get(where);
   if (!info || info.__token !== __token) {
-    const [content, details] = parseNode(__token, type, args);
-    renders.set(where, info = {__token, updates: []});
-    where.replaceChildren(importNode(content, details, info.updates));
+    info = new HoleInfo;
+    populateInfo(info, __token, what);
+    where.replaceChildren(...info.nodes);
   }
-  for (const update of info.updates)
-    update(args);
+  else
+    refresh(info, what);
 };
 
 let {document} = globalThis;
