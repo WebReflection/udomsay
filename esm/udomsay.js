@@ -49,6 +49,7 @@ export const render = (what, where) => {
     info = new HoleInfo;
     populateInfo(info, __token, what);
     where.replaceChildren(...info.nodes);
+    renders.set(where, info);
   }
   else
     refresh(info, what);
