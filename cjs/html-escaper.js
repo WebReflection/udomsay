@@ -12,5 +12,7 @@ const esca = {
   '"': '&quot;'
 };
 
-const escape = value => value.replace(es, cape);
+const {replace} = '';
+
+const escape = value => replace.call(value, es, cape);
 exports.escape = escape;

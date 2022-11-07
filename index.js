@@ -264,7 +264,9 @@ const esca = {
   '"': '&quot;'
 };
 
-const escape = value => value.replace(es, cape);
+const {replace} = '';
+
+const escape = value => replace.call(value, es, cape);
 
 /*! (c) Andrea Giammarchi - ISC */
 
@@ -834,7 +836,7 @@ const createUpdates = (container, details, updates) => {
                     diff(parentNode, nodes, info.nodes, node);
                   }
                 })(args, value);
-              } 
+              }
             }
           }
           // primitive value

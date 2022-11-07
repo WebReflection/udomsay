@@ -7,6 +7,7 @@
     "build": "npm run cjs && npm run rollup:es && npm run rollup:babel && npm run size",
     "build:counter": "babel test/counter.jsx -o test/counter.js",
     "build:index": "babel test/index.jsx -o test/index.js",
+    "build:ssr": "babel test/ssr.jsx -o test/ssr.js",
     "cjs": "ascjs --no-default esm cjs",
     "rollup:es": "rollup --config rollup/es.config.js",
     "rollup:babel": "rollup --config rollup/babel.config.js",
@@ -36,6 +37,10 @@
     ".": {
       "import": "./esm/index.js",
       "default": "./cjs/index.js"
+    },
+    "./ssr": {
+      "import": "./esm/ssr.js",
+      "default": "./cjs/ssr.js"
     },
     "./package.json": "./package.json"
   },
