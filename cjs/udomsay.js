@@ -180,7 +180,7 @@ const createUpdates = (container, details, updates) => {
                     diff(parentNode, nodes, info.nodes, node);
                   }
                 })(args, value);
-              } 
+              }
             }
           }
           // primitive value
