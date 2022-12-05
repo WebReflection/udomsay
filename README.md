@@ -6,7 +6,7 @@ A stricter, signals driven, JSX based library.
 
 ## What
 
-This library includes, in about *3.5Kb*, logic to parse [a specialized form of JSX](https://github.com/ungap/babel-plugin-transform-hinted-jsx#readme) and through [signals](https://github.com/WebReflection/usignal#readme), with effects automatically enabled through components.
+This library includes, in about *2.7Kb*, logic to parse [a specialized form of JSX](https://github.com/ungap/babel-plugin-transform-esx#readme), or its [template literal based variant](https://github.com/ungap/esx#reade), and through [signals](https://github.com/WebReflection/usignal#readme), with effects automatically enabled through renders.
 
 The goal of this library is:
 
@@ -30,14 +30,9 @@ Following the current set of stricter rules around *JSX* usage and how to avoid/
 
 Given the following `counter.jsx` file:
 ```jsx
-/** @jsx C *//** @jsxFrag F *//** @jsxInterpolation I */
-
 import {
   render,
   signal,
-  createElement as C,
-  Fragment as F,
-  interpolation as I
 } from 'udomsay';
 
 function Counter({clicks}) {
@@ -57,7 +52,7 @@ Providing the following `babel.config.json` transformer:
 ```json
 {
   "plugins": [
-    ["@ungap/babel-plugin-transform-hinted-jsx"]
+    ["@ungap/babel-plugin-transform-esx"]
   ]
 }
 ```
