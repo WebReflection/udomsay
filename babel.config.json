@@ -1,5 +1,5 @@
 {
   "plugins": [
-    ["@ungap/babel-plugin-transform-hinted-jsx"]
+    ["@ungap/transform-esx", { "polyfill": "inline" }]
   ]
 }

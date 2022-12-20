@@ -1,3 +1,30 @@
+const EMPTY = Object.freeze([]);
+
+/** (c) Andrea Giammarchi - ISC */
+
+class Token {
+  static ATTRIBUTE =      1;
+  static COMPONENT =      2;
+  static ELEMENT =        3;
+  static FRAGMENT =       4;
+  static INTERPOLATION =  5;
+  static STATIC =         6;
+  get properties() {
+    const {attributes} = this;
+    if (attributes.length) {
+      const properties = {};
+      for (const entry of attributes) {
+        if (entry.type < 2)
+          properties[entry.name] = entry.value;
+        else
+          Object.assign(properties, entry.value);
+      }
+      return properties;
+    }
+    return null;
+  }
+}
+
 /*! (c) Andrea Giammarchi */
 
 const {is} = Object;
@@ -81,7 +108,7 @@ const computed = (fn, value, options = defaults) =>
                           new Computed(fn, value, options, false);
 
 let outerEffect;
-const empty$1 = [];
+const empty = [];
 const noop = () => {};
 const dispose = ({s}) => {
   if (typeof s._ === 'function')
@@ -91,7 +118,7 @@ const dispose = ({s}) => {
 class FX extends Computed {
   constructor(_, v, o) {
     super(_, v, o, true);
-    this.e = empty$1;
+    this.e = empty;
   }
   run() {
     this.$ = true;
@@ -148,7 +175,7 @@ class Effect extends FX {
  * @template T
  * @type {<T>(fn: (v: T) => T, value?: T, options?: { async?: boolean }) => () => void}
  */
-const effect$2 = (callback, value, options = defaults) => {
+const effect$1 = (callback, value, options = defaults) => {
   let unique;
   if (outerEffect) {
     const {i, e} = outerEffect;
@@ -236,121 +263,9 @@ const options$1 = {async: false};
  * @template T
  * @type {<T>(fn: (v?: T) => T?, value?: T) => () => void 0}
  */
-const effect$1 = (fn, value) => effect$2(fn, value, options$1);
+const effect = (fn, value) => effect$1(fn, value, options$1);
 
-/*! (c) Andrea Giammarchi - ISC */
-
-const COMPONENT = 'function';
-const FRAGMENT = 'symbol';
-const NODE = 'string';
-const OBJECT = 'object';
-const UDOMSAY = '<!--🙊-->';
-
-const empty = [];
-
-/*! (c) Andrea Giammarchi - ISC */
-const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$/i;
-
-/*! (c) Andrea Giammarchi - ISC */
-
-// @see https://github.com/WebReflection/html-escaper#readme
-const es = /[&<>'"]/g;
-const cape = pe => esca[pe];
-const esca = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  "'": '&#39;',
-  '"': '&quot;'
-};
-
-const {replace} = '';
-
-const escape = value => replace.call(value, es, cape);
-
-/*! (c) Andrea Giammarchi - ISC */
-
-const {isArray} = Array;
-const {entries} = Object;
-
-const asValue = (value, isSignal) => {
-  const data = isSignal ? value.value : value;
-  return data == null ? '' : data;
-};
-
-const dontIgnoreKey = key => {
-  switch (key) {
-    case '__token':
-    case 'key':
-    case 'is':
-      return false;
-  }
-  return true;
-};
-
-const options = {async: false, equals: true};
-const effect = fn => new Effect(fn, void 0, options).run();
-const fx = fn => new FX(fn, void 0, options).run();
-
-const getChild = (child, args) => {
-  for (let i = 0; i < child.length; i++)
-    args = args[child[i]].args;
-  return args;
-};
-
-const getHole = (child, args) => {
-  const length = child.length - 1;
-  for (let i = 0; i < length; i++)
-    args = args[child[i]].args;
-  return args[child[length]].value;
-};
-
-const getNode = (tree, node) => {
-  for (let i = 0; i < tree.length; i++)
-    node = node.childNodes[tree[i]];
-  return node;
-};
-
-const properties = new Map;
-let considerPlugins = false;
-
-const useProperty = (key, fn) => {
-  considerPlugins = true;
-  properties.set(key, fn);
-};
-
-const setProperty = (node, key, value, prev) => {
-  if (considerPlugins && properties.has(key))
-    properties.get(key)(node, value, prev);
-  else if (prev[key] !== value) {
-    prev[key] = value;
-    switch (key) {
-      case 'class':
-        key += 'Name';
-      case 'className':
-      case 'textContent':
-        node[key] = value;
-        break;
-      case 'ref':
-        value.current = node;
-        break;
-      default:
-        if (key.startsWith('on'))
-          node[key.toLowerCase()] = value;
-        else if (key in node)
-          node[key] = value;
-        else {
-          if (value == null)
-            node.removeAttribute(key);
-          else
-            node.setAttribute(key, value);
-        }
-        break;
-    }
-  }
-};
-
-/*! (c) Andrea Giammarchi - ISC */
+/* (c) Andrea Giammarchi - ISC */
 // @see https://github.com/WebReflection/udomdiff
 const diff = (parentNode, a, b, before) => {
   const bLength = b.length;
@@ -483,448 +398,363 @@ const diff = (parentNode, a, b, before) => {
   return b;
 };
 
-/*! (c) Andrea Giammarchi - ISC */
+const {
+  ATTRIBUTE,
+  COMPONENT,
+  ELEMENT,
+  FRAGMENT,
+  INTERPOLATION,
+  STATIC
+} = Token;
 
-class Info {
-  constructor(type, child, tree, details, html) {
-    this.fragment = type === FRAGMENT;
-    this.type = type;
-    this.child = child;
-    this.tree = tree;
-    this.details = details;
-    this.html = html;
-  }
-  next(type, index, tree) {
-    return new Info(
-      type,
-      this.child.concat(index),
-      tree,
-      this.details,
-      this.html
-    );
-  }
-  parse(args) {
-    createDetails.apply(this, args);
-    return this;
-  }
-  push(props, hole = false, child = this.child, tree = this.tree) {
-    this.details.push({child, tree, props, hole});
-  }
-}
+const {isArray} = Array;
+const {assign, getPrototypeOf, prototype: {isPrototypeOf}} = Object;
+const isSignal = isPrototypeOf.bind(Signal.prototype);
 
-const getTree = (fragment, tree, index) => {
-  let newTree;
-  if (fragment) {
-    const {length} = tree;
-    if (length) {
-      const sum = tree[length - 1];
-      newTree = tree.slice(0, -1).concat(sum + index);
-    }
-    else
-      newTree = empty;
+const options = {async: false, equals: true};
+const fx = fn => new FX(fn, void 0, options);
+
+let isToken;
+const views = new WeakMap;
+/**
+ * Reveal some `token` content into a `DOM` element.
+ * @param {function(...any):Token | Token} what the token to render
+ * @param {Element} where the DOM node to render such token
+ */
+const render = (what, where) => {
+  const token = typeof what === 'function' ? what() : what;
+  if (!isToken)
+    isToken = isPrototypeOf.bind(getPrototypeOf(token));
+  let view = views.get(where);
+  if (!view || view.token.id !== token.id) {
+    if (view) view.fx.stop();
+    const [updates, content] = parse(token);
+    view = {
+      token,
+      info: {
+        updates,
+        content: token.type === FRAGMENT ?
+          asChildNodes(content) :
+          content
+      },
+      fx: new Effect(
+        init => !!batch(() => callUpdates(view.token, init, view.info)),
+        true,
+        options
+      )
+    };
+    views.set(where, view);
+    where.replaceChildren(content);
   }
-  else
-    newTree = tree.concat(index);
-  return newTree;
+  view.token = token;
+  view.fx.run();
 };
 
-function createDetails(entry, props) {
-  const {type, html} = this;
-  const {length} = arguments;
-  switch (type) {
-    case NODE:
-      html.push(`<${entry}`);
-      if (props) {
-        const {is} = props;
-        if (is) html.push(` is="${is}"`);
-        if (props instanceof Interpolation)
-          this.push(empty);
-        else {
-          const runtime = [];
-          for (const [key, value] of entries(props)) {
-            if (dontIgnoreKey(key)) {
-              if (value instanceof Interpolation)
-                runtime.push(key);
-              else {
-                html.push(
-                  ` ${key === 'className' ? 'class' : key}="${escape(value)}"`
-                );
-              }
-            }
-          }
-          if (runtime.length)
-            this.push(runtime);
-        }
-      }
-      if (length === 2)
-        html.push(VOID_ELEMENTS.test(entry) ? ' />' : `></${entry}>`);
-      else {
-        html.push('>');
-        mapChildren.apply(this, arguments);
-        html.push(`</${entry}>`);
-      }
-      return 1;
-    case COMPONENT:
-      html.push(UDOMSAY);
-      this.push(null);
-      return 1;
-    case FRAGMENT:
-      return mapChildren.apply(this, arguments);
+const callUpdates = (token, init, {updates, content}) => {
+  const after = init ? [] : EMPTY;
+  for (let i = 0; i < updates.length; i++) {
+    const result = updates[i](token, content);
+    if (result)
+      after.push(updates[i] = result);
   }
-  throw new Error(entry);
-}
+  for (let i = 0; i < after.length; i++)
+    after[i](token, content);
+};
 
-function mapChildren(_, props) {
-  const {fragment, child, tree, html} = this;
-  const root = fragment && !props?.__token;
-  let index = 0;
-  for (let i = 2; i < arguments.length; i++) {
-    const arg = arguments[i];
-    if (typeof arg === OBJECT) {
-      if (arg instanceof Interpolation) {
-        html.push(UDOMSAY);
-        this.push(null, true, child.concat(i), getTree(root, tree, index++));
-      }
-      else {
-        const {type, args} = arg;
-        index += createDetails.apply(
-          this.next(type, i, getTree(root, tree, index)),
-          args
-        );
-      }
-    }
-    else {
-      index++;
-      html.push(arg);
-    }
+const tokens = new WeakMap;
+const parse = token => {
+  let info = tokens.get(token.id);
+  if (!info) {
+    const updates = [];
+    const content = mapToken(token, updates, [], []);
+    tokens.set(token.id, info = [updates, content]);
   }
-  return index;
-}
-
-class Interpolation {
-  constructor(value) { this.value = value; }
-}
-
-class HoleInfo {
-  constructor() {
-    this.__token = null;
-    this.store = null;
-  }
-  get nodes() { return this.store.nodes }
-}
-
-class KeyedHoleInfo extends HoleInfo {
-  constructor(key) {
-    super().key = key;
-  }
-}
-
-class Store {
-  constructor(args, updates, nodes) {
-    this.args = null;
-    this.nodes = nodes;
-    this.updates = updates;
-    this.refresh(args);
-  }
-  refresh(args) {
-    if (this.args !== args) {
-      this.args = args;
-      for (const update of this.updates)
-        update(this.args);
-    }
-  }
-}
-
-class ComponentStore {
-  constructor(args, parseNode, getNodes) {
-    this.args = args;
-    this.calc = false;
-    this.init = true;
-    this.keys = null;
-    this.effect = effect(() => {
-      const {args, calc, init, keys} = this;
-      let [component, props, ...children] = args;
-      if (init) {
-        this.init = false;
-        // map interpolations passed as props to components
-        if (props) {
-          if (props instanceof Interpolation) {
-            this.keys = empty;
-            props = props.value;
-          }
-          else {
-            const runtime = [];
-            for (const [key, value] of entries(props)) {
-              if (value instanceof Interpolation) {
-                runtime.push(key);
-                props[key] = value.value;
-              }
-            }
-            if (runtime.length)
-              this.keys = runtime;
-          }
-        }
-      }
-      else if (calc) {
-        this.calc = false;
-        if (keys === empty)
-          props = props.value;
-        else if (keys) {
-          for (const key of keys)
-            props[key] = props[key].value;
-        }
-      }
-      this.result = component(props, ...children);
-      if (init) {
-        const {type, args} = this.result;
-        const [content, details] = parseNode(args[1].__token, type, args);
-        this.nodes = getNodes(content, details, this.updates = [], type !== FRAGMENT);
-      }
-      for (const update of this.updates)
-        update(this.result.args);
-    });
-  }
-  refresh(args) {
-    if (this.args !== args) {
-      this.args = args;
-      this.calc = true;
-      // TODO: maybe add a run() method instead?
-      this.effect.run();
-    }
-  }
-}
-
-/*! (c) Andrea Giammarchi - ISC */
-
-const Fragment = Symbol();
-
-function createElement(entry) {
-  return {type: typeof entry, args: arguments};
-}
-
-const interpolation = value => new Interpolation(value);
-
-const renders = new WeakMap;
-const render = (what, where) => {
-  if (typeof what === COMPONENT) what = what();
-  const {__token} = what.args[1];
-  let info = renders.get(where);
-  if (!info || info.__token !== __token) {
-    info = new HoleInfo;
-    populateInfo(info, __token, what);
-    where.replaceChildren(...info.nodes);
-    renders.set(where, info);
-  }
-  else
-    refresh(info, what);
+  const [updates, content] = info;
+  return [updates.slice(), content.cloneNode(true)];
 };
 
 let {document} = globalThis;
+/**
+ * Update the default document to a different one.
+ * @param {Document} doc the Document to use
+ */
 const useDocument = doc => {
   document = doc;
 };
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-const createUpdates = (container, details, updates) => {
-  for (const {child, tree, props, hole} of details) {
-    const node = getNode(tree, container);
-    // attributes
-    if (props) {
-      const prev = {};
-      updates.push(
-        props.length ?
-        // static props
-        args => {
-          const values = getChild(child, args)[1];
-          for (const key of props)
-            setProperty(node, key, values[key].value, prev);
-        } :
-        // props as interpolation
-        args => {
-          const values = getChild(child, args)[1].value;
-          for (const [key, value] of entries(values)) {
-            if (dontIgnoreKey(key))
-              setProperty(node, key, value, prev);
-          }
+const mapToken = (token, updates, a, c) => {
+  let callback, content;
+  type: switch (token.type) {
+    case INTERPOLATION: {
+      const {value} = token;
+      switch (true) {
+        case isToken(value):
+          callback = handleToken;
+          break;
+        case isArray(value):
+          callback = handleArray;
+          break;
+        case isSignal(value):
+          callback = handleSignal.bind(value);
+          break;
+        default: {
+          content = document.createTextNode('');
+          updates.push(handleContent(c));
+          break type;
         }
-      );
-    }
-    // holes or static components
-    else {
-      const index = updates.push(hole ?
-        // fine-tune the kind of update that's needed in the future
-        args => {
-          const value = getHole(child, args);
-          if (typeof value === OBJECT) {
-            if (isArray(value)) {
-              const {parentNode} = node;
-              let isKeyed = false, keys = null, stack = empty, nodes = empty;
-              (updates[index] = (args, hole = getHole(child, args)) => {
-                const array = [];
-                const newStack = [];
-                const {length} = stack;
-                let i = 0;
-                for (; i < hole.length; i++) {
-                  const known = i < length;
-                  const value = hole[i];
-                  const {__token, key} = value.args[1];
-                  if (!isKeyed && key !== void 0) {
-                    isKeyed = true;
-                    keys = {};
-                  }
-                  let info = known ? stack[i] : null;
-                  if (
-                    // fast path for same __token at same keyed/index
-                    ((known && __token === info.__token) &&
-                    (!isKeyed || key.value === info.key)) ||
-                    // fast path for known keyed items
-                    (isKeyed && (info = keys[key.value]))
-                  ) {
-                    refresh(info, value);
-                  }
-                  // start fresh with new item
-                  else {
-                    if (isKeyed) {
-                      info = new KeyedHoleInfo(key.value);
-                      keys[key.value] = info;
-                    }
-                    else
-                      info = new HoleInfo;
-                    populateInfo(info, __token, value);
-                  }
-                  newStack.push(info);
-                  array.push(...info.nodes);
-                }
-                if (i) {
-                  nodes = diff(parentNode, nodes, array, node);
-                  stack = newStack;
-                }
-                // fast path for all items cleanup
-                else {
-                  const {length} = nodes;
-                  if (length) {
-                    const range = document.createRange();
-                    range.setStartBefore(nodes[0]);
-                    range.setEndAfter(nodes[length - 1]);
-                    range.deleteContents();
-                    nodes = empty;
-                    if (isKeyed)
-                      keys = {};
-                  }
-                  stack = empty;
-                }
-              })(args, value);
-            }
-            else {
-              const isSignal = value instanceof Signal;
-              // signal with primitive value
-              if (isSignal && (typeof value.peek() !== OBJECT))
-                updates[index] = useDataUpdate(child, node, value, true);
-              // every other case
-              else {
-                const {parentNode} = node;
-                const info = new HoleInfo;
-                (updates[index] = (args, hole = getHole(child, args)) => {
-                  const value = asValue(hole, isSignal);
-                  const {__token} = value.args[1];
-                  if (__token === info.__token)
-                    refresh(info, value);
-                  else {
-                    const {nodes} = info;
-                    populateInfo(info, __token, value);
-                    diff(parentNode, nodes, info.nodes, node);
-                  }
-                })(args, value);
-              }
-            }
-          }
-          // primitive value
-          else
-            updates[index] = useDataUpdate(child, node, asValue(value, false), false);
-        } :
-        // static component case
-        args => {
-          const store = createComponentStore(getChild(child, args));
-          node.replaceWith(...store.nodes);
-          updates[index] = args => {
-            store.refresh(getChild(child, args));
-          };
-        }
-      ) - 1;
-    }
-  }
-};
-
-const getNodes = (content, details, updates, isNode) => {
-  const node = importNode(content, details, updates);
-  return isNode ? [node] : [...node.childNodes];
-};
-
-const importNode = (content, details, updates) => {
-  const container = document.importNode(content, true);
-  createUpdates(container, details, updates);
-  return container;
-};
-
-const createComponentStore = args => new ComponentStore(args, parseNode, getNodes);
-
-const parseNode = (__token, type, args) => {
-  let {info} = __token;
-  if (!info) {
-    const {html, fragment, details} =
-      new Info(type, empty, empty, [], []).parse(args);
-    const template = document.createElement('template');
-    template.innerHTML = html.join('');
-    const {content} = template;
-    __token.info = (
-      info = [
-        fragment ? content : content.firstChild,
-        details
-      ]
-    );
-  }
-  return info;
-};
-
-const populateInfo = (info, __token, {type, args}) => {
-  info.__token = __token;
-  if (type === COMPONENT)
-    info.store = createComponentStore(args);
-  else {
-    const updates = [];
-    const [content, details] = parseNode(__token, type, args);
-    const nodes = getNodes(content, details, updates, type === NODE);
-    info.store = new Store(args, updates, nodes);
-  }
-};
-
-const refresh = ({store}, {args}) => {
-  store.refresh(args);
-};
-
-const useDataUpdate = (child, node, value, isSignal) => {
-  const text = document.createTextNode(isSignal ? '' : value);
-  node.replaceWith(text);
-  if (isSignal) {
-    const atomic = fx(() => {
-      text.data = asValue(value, isSignal);
-    });
-    return args => {
-      const current = getHole(child, args);
-      if (current !== value) {
-        value = current;
-        atomic.run();
       }
-    };
+    }
+    case COMPONENT: {
+      content = document.createComment('🙊');
+      updates.push((callback || handleComponent)(c));
+      break;
+    }
+    case ELEMENT: {
+      const {attributes, name} = token;
+      const args = [name];
+      const attrs = [];
+      for (let i = 0; i < attributes.length; i++) {
+        const entry = attributes[i];
+        if (entry.type === ATTRIBUTE && entry.name === 'is')
+          args.push({extends: entry.value});
+        else if (entry.type === INTERPOLATION || entry.dynamic)
+          a.push(i);
+        else
+          attrs.push(entry);
+      }
+      if (a.length)
+        updates.push(handleAttributes(a, c));
+      content = document.createElement(...args);
+      for (const {name, value} of attrs)
+        setAttribute(content, name, value, true);
+      addChildren(token, updates, content, c);
+      break;
+    }
+    case FRAGMENT: {
+      content = document.createDocumentFragment();
+      addChildren(token, updates, content, c);
+      break;
+    }
   }
-  return args => {
-    const current = asValue(getHole(child, args), isSignal);
-    if (current !== value) {
-      value = current;
-      text.data = current;
+  return content;
+};
+
+const asChildNodes = ({childNodes}) => ({childNodes: [...childNodes]});
+const getChild = ({childNodes}, i) => childNodes[i];
+const getToken = ({children}, i) => children[i];
+
+const addChildren = ({children}, updates, content, c) => {
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    switch (child.type) {
+      case STATIC:
+        content.appendChild(document.createTextNode(child.value));
+        break;
+      default:
+        content.appendChild(
+          mapToken(children[i], updates, [], c.concat(i))
+        );
+        break;
+    }
+  }
+};
+
+const handleAttributes = (a, c) => (_, node) => {
+  const prev = {};
+  node = c.reduce(getChild, node);
+  return token => {
+    const {attributes} = c.reduce(getToken, token);
+    for (const index of a) {
+      const {name, value} = attributes[index];
+      setProperty(node, name, value, prev);
     }
   };
 };
 
-export { Effect, FX, Fragment, Signal, batch, computed, createElement, effect$1 as effect, interpolation, render, signal, useDocument, useProperty };
+const handleContent = c => (_, node) => {
+  node = c.reduce(getChild, node);
+  return token => {
+    const {value} = c.reduce(getToken, token);
+    const data = value == null ? '' : String(value);
+    if (data !== node.data)
+      node.data = value;
+  };
+};
+
+const handleAll = asComponent => c => (_, node) => {
+  node = c.reduce(getChild, node);
+  const {parentNode} = node;
+  const component = {};
+  let diffed = EMPTY;
+  return token => {
+    token = c.reduce(getToken, token);
+    const prev = component.result;
+    const result = asComponent ? token.value(token.properties, ...token.children) : token;
+    const init = !prev || (result.id !== prev.id);
+    if (init) {
+      const [updates, content] = parse(result);
+      const isFragment = result.type === FRAGMENT;
+      assign(component, {
+        result,
+        updates,
+        content: isFragment ?
+          asChildNodes(content) :
+          content
+      });
+      diffed = diff(
+        parentNode,
+        diffed,
+        isFragment ?
+          component.content.childNodes :
+          [content],
+        node
+      );
+    }
+    callUpdates(result, init, component);
+  };
+};
+
+const handleComponent = handleAll(true);
+const handleToken = handleAll(false);
+
+const handleArray = c => (_, node) => {
+  node = c.reduce(getChild, node);
+  const {parentNode} = node;
+  const keys = new Map;
+  let diffed = EMPTY;
+  return token => {
+    const {value} = c.reduce(getToken, token);
+    const info = value.map(asArray, keys);
+    const after = [];
+    const diffing = [];
+    const init = diffed === EMPTY;
+    for (const [token, details, nodes] of info) {
+      after.push([token, details]);
+      diffing.push(...nodes);
+    }
+    if (diffing.length) {
+      diffed = diff(parentNode, diffed, diffing, node);
+      for (const [token, details] of after)
+        callUpdates(token, init, details);
+    }
+    else if(diffed !== EMPTY) {
+      const range = document.createRange();
+      range.setStartBefore(diffed[0]);
+      range.setEndAfter(diffed[diffed.length - 1]);
+      range.deleteContents();
+      keys.clear();
+      diffed = EMPTY;
+    }
+  };
+};
+
+const properties = new Map;
+let considerPlugins = false;
+
+const useProperty = (key, fn) => {
+  considerPlugins = true;
+  properties.set(key, fn);
+};
+
+const setAttribute = (node, key, value, set) => {
+  if (set)
+    node.setAttribute(key, value);
+  else
+    node[key] = value;
+};
+
+const asSignalAttribute = (node, key, value, set) => {
+  if (isSignal(value)) {
+    fx(() => {
+      setAttribute(node, key, value.value, set);
+    }).run();
+  }
+  else
+    setAttribute(node, key, value, set);
+};
+
+const setProperty = (node, key, value, prev) => {
+  if (considerPlugins && properties.has(key))
+    properties.get(key)(node, value, prev);
+  else if (prev[key] !== value) {
+    prev[key] = value;
+    switch (key) {
+      case 'class':
+        key += 'Name';
+      case 'className':
+      case 'textContent':
+        asSignalAttribute(node, key, value, false);
+        break;
+      case 'ref':
+        value.current = node;
+        break;
+      default:
+        if (key.startsWith('on'))
+          node[key.toLowerCase()] = value;
+        else if (key in node)
+          asSignalAttribute(node, key, value, false);
+        else {
+          if (value == null)
+            node.removeAttribute(key);
+          else
+            asSignalAttribute(node, key, value, true);
+        }
+        break;
+    }
+  }
+};
+
+function handleSignal(c) {
+  const value = this.peek();
+  return (_, node) => {
+    if (isToken(value)) {
+      const copy = c.slice();
+      const update = handleAll(value.type === COMPONENT)(copy)(_, node);
+      const effect = fx(() => { update(this.value); });
+      return () => {
+        if (copy.length) {
+          copy.splice(0);
+          effect.run();
+        }
+      };
+    }
+    else {
+      const text = document.createTextNode('');
+      c.reduce(getChild, node).replaceWith(text);
+      fx(() => { text.data = this.value; }).run();
+      return Function.prototype;
+    }
+  };
+}
+
+const key = ({name}) => name === 'key';
+function asArray(token, i) {
+  const {value} = token.attributes.find(key) || {value: i};
+  let info = this.get(value);
+  if (!info) {
+    const [updates, content] = parse(token);
+    switch (token.type) {
+      case ELEMENT:
+        info = [token, {updates, content}, [content]];
+        break;
+      // TODO: components returning components and components
+      //       with a conditional return are not supported as Array
+      case COMPONENT: {
+        const result = token.value(token.properties, ...token.children);
+        const [updates, content] = parse(result);
+        const isFragment = result.type === FRAGMENT;
+        const ctx = isFragment ? asChildNodes(content) : content;
+        info = [result, {updates, content: ctx}, isFragment ? ctx.childNodes : [content]];
+        break;
+      }
+      case FRAGMENT:
+        const ctx = asChildNodes(content);
+        info = [token, {updates, content: ctx}, ctx.childNodes];
+        break;
+    }
+    this.set(value, info);
+  }
+  return info;
+}
+
+export { Effect, FX, Signal, batch, computed, diff, effect, render, signal, useDocument, useProperty };
