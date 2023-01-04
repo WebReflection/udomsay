@@ -1,12 +1,6 @@
-/** @jsx C *//** @jsxFrag F *//** @jsxInterpolation I */
-
-import {
-  render,
-  signal,
-  createElement as C,
-  Fragment as F,
-  interpolation as I
-} from '../esm/ssr.js';
+import createRender from '../esm/ssr.js';
+import {Signal} from '@webreflection/signal';
+const render = createRender({Signal});
 
 function Counter({clicks}) {
   return (

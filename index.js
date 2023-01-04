@@ -1,4 +1,8 @@
-const EMPTY = Object.freeze([]);
+var freeze = Object.freeze;
+
+var EMPTY = freeze([]);
+
+var noop = () => {};
 
 /** (c) Andrea Giammarchi - ISC */
 
@@ -25,249 +29,10 @@ class Token {
   }
 }
 
-/*! (c) Andrea Giammarchi */
-
-const {is} = Object;
-
-let batches;
-
-/**
- * Execute a callback that will not side-effect until its top-most batch is
- * completed.
- * @param {() => void} callback a function that batches changes to be notified
- *  through signals.
- */
-const batch = callback => {
-  const prev = batches;
-  batches = prev || [];
-  try {
-    callback();
-    if (!prev)
-      for (const {value} of batches);
-  }
-  finally { batches = prev; }
-};
-
-/**
- * A signal with a value property also exposed via toJSON, toString and valueOf.
- * When created via computed, the `value` property is **readonly**.
- * @template T
- */
-class Signal {
-  /** @param {T} value the value carried along the signal. */
-  constructor(value) {
-    this._ = value;
-  }
-
-  /** @returns {T} */
-  then() { return this.value }
-
-  /** @returns {T} */
-  toJSON() { return this.value }
-
-  /** @returns {T} */
-  toString() { return this.value }
-
-  /** @returns {T} */
-  valueOf() { return this.value }
-}
-
-let computedSignal;
-class Computed extends Signal {
-  constructor(_, v, o, f) {
-    super(_);
-    this.f = f;                   // is effect?
-    this.$ = true;                // should update ("value for money")
-    this.r = new Set;             // related signals
-    this.s = new Reactive(v, o);  // signal
-  }
-  /** @readonly */
-  get value() {
-    if (this.$) {
-      const prev = computedSignal;
-      computedSignal = this;
-      try { this.s.value = this._(this.s._); }
-      finally {
-        this.$ = false;
-        computedSignal = prev;
-      }
-    }
-    return this.s.value;
-  }
-}
-
-const defaults = {async: false, equals: true};
-
-/**
- * Returns a read-only Signal that is invoked only when any of the internally
- * used signals, as in within the callback, is unknown or updated.
- * @template T
- * @type {<T>(fn: (v: T) => T, value?: T, options?: { equals?: boolean | ((prev: T, next: T) => boolean) }) => Signal<T>}
- */
-const computed = (fn, value, options = defaults) =>
-                          new Computed(fn, value, options, false);
-
-let outerEffect;
-const empty = [];
-const noop = () => {};
-const dispose = ({s}) => {
-  if (typeof s._ === 'function')
-    s._ = s._();
-};
-
-class FX extends Computed {
-  constructor(_, v, o) {
-    super(_, v, o, true);
-    this.e = empty;
-  }
-  run() {
-    this.$ = true;
-    this.value;
-    return this;
-  }
-  stop() {
-    this._ = noop;
-    this.r.clear();
-    this.s.c.clear();
-  }
-}
-
-class Effect extends FX {
-  constructor(_, v, o) {
-    super(_, v, o);
-    this.i = 0;         // index
-    this.a = !!o.async; // async
-    this.m = true;      // microtask
-    this.e = [];        // effects
-                        // "I am effects" ^_^;;
-  }
-  get value() {
-    this.a ? this.async() : this.sync();
-  }
-  async() {
-    if (this.m) {
-      this.m = false;
-      queueMicrotask(() => {
-        this.m = true;
-        this.sync();
-      });
-    }
-  }
-  sync() {
-    const prev = outerEffect;
-    (outerEffect = this).i = 0;
-    dispose(this);
-    super.value;
-    outerEffect = prev;
-  }
-  stop() {
-    super.stop();
-    dispose(this);
-    for (const effect of this.e.splice(0))
-      effect.stop();
-  }
-}
-
-/**
- * Invokes a function when any of its internal signals or computed values change.
- * 
- * Returns a dispose callback.
- * @template T
- * @type {<T>(fn: (v: T) => T, value?: T, options?: { async?: boolean }) => () => void}
- */
-const effect$1 = (callback, value, options = defaults) => {
-  let unique;
-  if (outerEffect) {
-    const {i, e} = outerEffect;
-    const isNew = i === e.length;
-    // bottleneck:
-    // there's literally no way to optimize this path *unless* the callback is
-    // already a known one. however, latter case is not really common code so
-    // the question is: should I optimize this more than this? 'cause I don't
-    // think the amount of code needed to understand if a callback is *likely*
-    // the same as before makes any sense + correctness would be trashed.
-    if (isNew || e[i]._ !== callback) {
-      if (!isNew) e[i].stop();
-      e[i] = new Effect(callback, value, options).run();
-    }
-    unique = e[i];
-    outerEffect.i++;
-  }
-  else
-    unique = new Effect(callback, value, options).run();
-  return () => { unique.stop(); };
-};
-
-const skip = () => false;
-class Reactive extends Signal {
-  constructor(_, {equals}) {
-    super(_);
-    this.c = new Set;                                 // computeds
-    this.s = equals === true ? is : (equals || skip); // (don't) skip updates
-  }
-  peek() { return this._ }
-  get value() {
-    if (computedSignal) {
-      this.c.add(computedSignal);
-      computedSignal.r.add(this);
-    }
-    return this._;
-  }
-  set value(_) {
-    const prev = this._;
-    if (!this.s((this._ = _), prev)) {
-      if (this.c.size) {
-        const effects = [];
-        const stack = [this];
-        for (const signal of stack) {
-          for (const computed of signal.c) {
-            if (!computed.$ && computed.r.has(signal)) {
-              computed.r.clear();
-              computed.$ = true;
-              if (computed.f) {
-                effects.push(computed);
-                const stack = [computed];
-                for (const c of stack) {
-                  for (const effect of c.e) {
-                    effect.r.clear();
-                    effect.$ = true;
-                    stack.push(effect);
-                  }
-                }
-              }
-              else
-                stack.push(computed.s);
-            }
-          }
-        }
-        for (const effect of effects)
-          batches ? batches.push(effect) : effect.value;
-      }
-    }
-  }
-}
-
-/**
- * Returns a writable Signal that side-effects whenever its value gets updated.
- * @template T
- * @type {<T>(initialValue: T, options?: { equals?: boolean | ((prev: T, next: T) => boolean) }) => Signal<T>}
- */
-const signal = (value, options = defaults) => new Reactive(value, options);
-
-const options$1 = {async: false};
-
-/**
- * Invokes synchronously a function when any of its internal signals or computed values change.
- *
- * Returns a dispose callback.
- * @template T
- * @type {<T>(fn: (v?: T) => T?, value?: T) => () => void 0}
- */
-const effect = (fn, value) => effect$1(fn, value, options$1);
-
 /* (c) Andrea Giammarchi - ISC */
 // @see https://github.com/WebReflection/udomdiff
-const diff = (parentNode, a, b, before) => {
+const diff = (a, b, before) => {
+  const {parentNode} = before;
   const bLength = b.length;
   let aEnd = a.length;
   let bEnd = bLength;
@@ -398,8 +163,12 @@ const diff = (parentNode, a, b, before) => {
   return b;
 };
 
+/*! (c) Andrea Giammarchi - ISC */
+
+const {isArray} = Array;
+const {getPrototypeOf, prototype: {isPrototypeOf}} = Object;
+
 const {
-  ATTRIBUTE,
   COMPONENT,
   ELEMENT,
   FRAGMENT,
@@ -407,354 +176,374 @@ const {
   STATIC
 } = Token;
 
-const {isArray} = Array;
-const {assign, getPrototypeOf, prototype: {isPrototypeOf}} = Object;
-const isSignal = isPrototypeOf.bind(Signal.prototype);
-
-const options = {async: false, equals: true};
-const fx = fn => new FX(fn, void 0, options);
-
-let isToken;
-const views = new WeakMap;
-/**
- * Reveal some `token` content into a `DOM` element.
- * @param {function(...any):Token | Token} what the token to render
- * @param {Element} where the DOM node to render such token
- */
-const render = (what, where) => {
-  const token = typeof what === 'function' ? what() : what;
-  if (!isToken)
-    isToken = isPrototypeOf.bind(getPrototypeOf(token));
-  let view = views.get(where);
-  if (!view || view.token.id !== token.id) {
-    if (view) view.fx.stop();
-    const [updates, content] = parse(token);
-    view = {
-      token,
-      info: {
-        updates,
-        content: token.type === FRAGMENT ?
-          asChildNodes(content) :
-          content
-      },
-      fx: new Effect(
-        init => !!batch(() => callUpdates(view.token, init, view.info)),
-        true,
-        options
-      )
-    };
-    views.set(where, view);
-    where.replaceChildren(content);
-  }
-  view.token = token;
-  view.fx.run();
-};
-
-const callUpdates = (token, init, {updates, content}) => {
-  const after = init ? [] : EMPTY;
-  for (let i = 0; i < updates.length; i++) {
-    const result = updates[i](token, content);
-    if (result)
-      after.push(updates[i] = result);
-  }
-  for (let i = 0; i < after.length; i++)
-    after[i](token, content);
-};
-
-const tokens = new WeakMap;
-const parse = token => {
-  let info = tokens.get(token.id);
-  if (!info) {
-    const updates = [];
-    const content = mapToken(token, updates, [], []);
-    tokens.set(token.id, info = [updates, content]);
-  }
-  const [updates, content] = info;
-  return [updates.slice(), content.cloneNode(true)];
-};
-
-let {document} = globalThis;
-/**
- * Update the default document to a different one.
- * @param {Document} doc the Document to use
- */
-const useDocument = doc => {
-  document = doc;
-};
-
-const mapToken = (token, updates, a, c) => {
-  let callback, content;
-  type: switch (token.type) {
-    case INTERPOLATION: {
-      const {value} = token;
-      switch (true) {
-        case isToken(value):
-          callback = handleToken;
-          break;
-        case isArray(value):
-          callback = handleArray;
-          break;
-        case isSignal(value):
-          callback = handleSignal.bind(value);
-          break;
-        default: {
-          content = document.createTextNode('');
-          updates.push(handleContent(c));
-          break type;
-        }
-      }
-    }
-    case COMPONENT: {
-      content = document.createComment('🙊');
-      updates.push((callback || handleComponent)(c));
-      break;
-    }
-    case ELEMENT: {
-      const {attributes, name} = token;
-      const args = [name];
-      const attrs = [];
-      for (let i = 0; i < attributes.length; i++) {
-        const entry = attributes[i];
-        if (entry.type === ATTRIBUTE && entry.name === 'is')
-          args.push({extends: entry.value});
-        else if (entry.type === INTERPOLATION || entry.dynamic)
-          a.push(i);
-        else
-          attrs.push(entry);
-      }
-      if (a.length)
-        updates.push(handleAttributes(a, c));
-      content = document.createElement(...args);
-      for (const {name, value} of attrs)
-        setAttribute(content, name, value, true);
-      addChildren(token, updates, content, c);
-      break;
-    }
-    case FRAGMENT: {
-      content = document.createDocumentFragment();
-      addChildren(token, updates, content, c);
-      break;
-    }
-  }
-  return content;
-};
-
+// generic utils
 const asChildNodes = ({childNodes}) => ({childNodes: [...childNodes]});
 const getChild = ({childNodes}, i) => childNodes[i];
 const getToken = ({children}, i) => children[i];
+const invoke = ({value, properties, children}) => value(properties, ...children);
+const isKey = ({name}) => name === 'key';
+const reachChild = (c, {content}) => c.reduce(getChild, content);
+const reachToken = (c, token) => c.reduce(getToken, token);
+const setData = (node, value) => {
+  const data = value == null ? '' : String(value);
+  if (data !== node.data)
+    node.data = data;
+};
 
-const addChildren = ({children}, updates, content, c) => {
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i];
-    switch (child.type) {
-      case STATIC:
-        content.appendChild(document.createTextNode(child.value));
-        break;
-      default:
-        content.appendChild(
-          mapToken(children[i], updates, [], c.concat(i))
-        );
-        break;
+/**
+ * @typedef {Object} RenderOptions utilities to use while rendering.
+ * @prop {Document} [document] the default document to use. By default it's the global one.
+ * @prop {[string, (node:Element, current:any, previous:any) => void][]} [plugins] a list of plugins to deal with,
+ *  used with attributes, example: `["stuff", (node, curr, prev) => { ... }]`
+ * @prop {(fn:function) => function} [effect] an utility to create effects on components.
+ *  It must return a dispose utility to drop previous effect.
+ * @prop {(s:any) => any} [getPeek] an utility to retrieve a Signal value without side-effects.
+ * @prop {(s:any) => any} [getValue] an utility to retrieve a Signal value.
+ * @prop {(s:any) => boolean} [isSignal] an utility to know if a value is a Signal.
+ * @prop {function} [Signal] an optional signal constructor used to trap-check.
+ * @prop {function} [diff] an optional function to diff nodes, not available in SSR.
+ *  `isSignal(ref)` utility whenever the `isSignal` field has not been provided.
+ */
+
+/**
+ * Return a `render(what, where)` utility able to deal with provided options.
+ * @param {RenderOptions} options
+ */
+var index = (options = {}) => {
+  const document = options.document || globalThis.document;
+  const plugins = new Map(options.plugins || []);
+  const considerPlugins = !!plugins.size;
+  const differ = options.diff || diff;
+  const effect = options.effect || (fn => (fn(), noop));
+  const getPeek = options.getPeek || (s => s.peek());
+  const getValue = options.getValue || (s => s.value);
+  const isSignal = options.isSignal || (
+    options.Signal ?
+      isPrototypeOf.bind(options.Signal.prototype) :
+      () => false
+  );
+
+  const text = value => document.createTextNode(value);
+
+  const getComponentView = (view, component) => {
+    view.dispose();
+    const dispose = effect(() => {
+      const token = invoke(component);
+      if (token.id !== view.id)
+        view = getView(view, token, false);
+      else
+        view.update(token);
+    });
+    view.dispose = dispose;
+    return view;
+  };
+  const getNewView = (view, token, createEffect) => {
+    view.dispose();
+    view = new View(token);
+    if (createEffect)
+      view.dispose = effect(() => view.update(token));
+    else
+      view.update(token);
+    return view;
+  };
+  const getView = (view, token, createEffect) => token.type === COMPONENT ?
+    getComponentView(view, token) :
+    getNewView(view, token, createEffect)
+  ;
+
+  class View {
+    constructor(token, shouldParse = true) {
+      const [updates, content] = shouldParse ? parse(token) : [EMPTY, null];
+      this._ = shouldParse && token.type === FRAGMENT;
+      this.id = token.id;
+      this.updates = updates;
+      this.content = content;
+      this.dispose = noop;
+    }
+    get $() {
+      const {content, _} = this;
+      if (_) {
+        this._ = !_;
+        return (this.content = asChildNodes(content)).childNodes;
+      }
+      return [content];
+    }
+    update(token) {
+      for (const update of this.updates)
+        update.call(this, token);
     }
   }
-};
 
-const handleAttributes = (a, c) => (_, node) => {
-  const prev = {};
-  node = c.reduce(getChild, node);
-  return token => {
-    const {attributes} = c.reduce(getToken, token);
-    for (const index of a) {
-      const {name, value} = attributes[index];
-      setProperty(node, name, value, prev);
+  const defaultView = new View({id: null}, false);
+  const defaultEntry = {id: null, view: defaultView};
+
+  const views = new WeakMap;
+  let isToken;
+
+  const tokens = new WeakMap;
+  const parse = token => {
+    let info = tokens.get(token.id);
+    if (!info) {
+      const updates = [];
+      const content = mapToken(token, updates, [], EMPTY, false);
+      tokens.set(token.id, info = [updates, content]);
     }
+    const [updates, content] = info;
+    return [updates.slice(), content.cloneNode(true)];
   };
-};
 
-const handleContent = c => (_, node) => {
-  node = c.reduce(getChild, node);
-  return token => {
-    const {value} = c.reduce(getToken, token);
-    const data = value == null ? '' : String(value);
-    if (data !== node.data)
-      node.data = value;
+  const setAttribute = (node, key, value, set) => {
+    if (set)
+      node.setAttribute(key, value);
+    else
+      node[key] = value;
   };
-};
 
-const handleAll = asComponent => c => (_, node) => {
-  node = c.reduce(getChild, node);
-  const {parentNode} = node;
-  const component = {};
-  let diffed = EMPTY;
-  return token => {
-    token = c.reduce(getToken, token);
-    const prev = component.result;
-    const result = asComponent ? token.value(token.properties, ...token.children) : token;
-    const init = !prev || (result.id !== prev.id);
-    if (init) {
-      const [updates, content] = parse(result);
-      const isFragment = result.type === FRAGMENT;
-      assign(component, {
-        result,
-        updates,
-        content: isFragment ?
-          asChildNodes(content) :
-          content
+  const asAttribute = (node, key, value, prev, set) => {
+    if (isSignal(value)) {
+      const dispose = '🙊' + key;
+      if (dispose in prev)
+        prev[dispose]();
+      prev[dispose] = effect(() => {
+        setAttribute(node, key, getValue(value), set);
       });
-      diffed = diff(
-        parentNode,
-        diffed,
-        isFragment ?
-          component.content.childNodes :
-          [content],
-        node
-      );
     }
-    callUpdates(result, init, component);
+    else
+      setAttribute(node, key, value, set);
   };
-};
 
-const handleComponent = handleAll(true);
-const handleToken = handleAll(false);
-
-const handleArray = c => (_, node) => {
-  node = c.reduce(getChild, node);
-  const {parentNode} = node;
-  const keys = new Map;
-  let diffed = EMPTY;
-  return token => {
-    const {value} = c.reduce(getToken, token);
-    const info = value.map(asArray, keys);
-    const after = [];
-    const diffing = [];
-    const init = diffed === EMPTY;
-    for (const [token, details, nodes] of info) {
-      after.push([token, details]);
-      diffing.push(...nodes);
-    }
-    if (diffing.length) {
-      diffed = diff(parentNode, diffed, diffing, node);
-      for (const [token, details] of after)
-        callUpdates(token, init, details);
-    }
-    else if(diffed !== EMPTY) {
-      const range = document.createRange();
-      range.setStartBefore(diffed[0]);
-      range.setEndAfter(diffed[diffed.length - 1]);
-      range.deleteContents();
-      keys.clear();
-      diffed = EMPTY;
+  const setProperty = (node, key, value, prev) => {
+    if (considerPlugins && plugins.has(key))
+      plugins.get(key)(node, value, prev);
+    else if (prev[key] !== value) {
+      prev[key] = value;
+      switch (key) {
+        case 'class':
+          key += 'Name';
+        case 'className':
+        case 'textContent':
+          asAttribute(node, key, value, prev, false);
+          break;
+        case 'ref':
+          value.current = node;
+          break;
+        default:
+          if (key.startsWith('on'))
+            node[key.toLowerCase()] = value;
+          else if (key in node)
+            asAttribute(node, key, value, prev, false);
+          else {
+            if (value == null)
+              node.removeAttribute(key);
+            else
+              asAttribute(node, key, value, prev, true);
+          }
+          break;
+      }
     }
   };
-};
 
-const properties = new Map;
-let considerPlugins = false;
+  const handleAttributes = (a, c, i) => function (token) {
+    const prev = {};
+    const node = reachChild(c, this);
+    (this.updates[i] = token => {
+      const {attributes} = reachToken(c, token);
+      for (const index of a) {
+        const {name, value} = attributes[index];
+        setProperty(node, name, value, prev);
+      }
+    })(token);
+  };
 
-const useProperty = (key, fn) => {
-  considerPlugins = true;
-  properties.set(key, fn);
-};
-
-const setAttribute = (node, key, value, set) => {
-  if (set)
-    node.setAttribute(key, value);
-  else
-    node[key] = value;
-};
-
-const asSignalAttribute = (node, key, value, set) => {
-  if (isSignal(value)) {
-    fx(() => {
-      setAttribute(node, key, value.value, set);
-    }).run();
-  }
-  else
-    setAttribute(node, key, value, set);
-};
-
-const setProperty = (node, key, value, prev) => {
-  if (considerPlugins && properties.has(key))
-    properties.get(key)(node, value, prev);
-  else if (prev[key] !== value) {
-    prev[key] = value;
-    switch (key) {
-      case 'class':
-        key += 'Name';
-      case 'className':
-      case 'textContent':
-        asSignalAttribute(node, key, value, false);
-        break;
-      case 'ref':
-        value.current = node;
-        break;
-      default:
-        if (key.startsWith('on'))
-          node[key.toLowerCase()] = value;
-        else if (key in node)
-          asSignalAttribute(node, key, value, false);
-        else {
-          if (value == null)
-            node.removeAttribute(key);
-          else
-            asSignalAttribute(node, key, value, true);
+  const handleArray = (c, i) => function (token) {
+    let diffed = EMPTY, findIndex = true, index = -1;
+    const node = reachChild(c, this);
+    const keys = new Map;
+    debugger;
+    (this.updates[i] = token => {
+      const {value} = reachToken(c, token);
+      const diffing = [];
+      for (let i = 0; i < value.length; i++) {
+        const token = value[i];
+        if (findIndex) {
+          findIndex = !findIndex;
+          index = token.attributes.findIndex(isKey);
         }
-        break;
-    }
-  }
-};
-
-function handleSignal(c) {
-  const value = this.peek();
-  return (_, node) => {
-    if (isToken(value)) {
-      const copy = c.slice();
-      const update = handleAll(value.type === COMPONENT)(copy)(_, node);
-      const effect = fx(() => { update(this.value); });
-      return () => {
-        if (copy.length) {
-          copy.splice(0);
-          effect.run();
+        const key = index < 0 ? i : token.attributes[index].value;
+        let {id, view} = keys.get(key) || defaultEntry;
+        if (id !== token.id) {
+          view = getView(view, token, false);
+          keys.set(key, {id: token.id, view});
         }
+        else
+          view.update(token);
+        diffing.push(...view.$);
+      }
+      if (diffing.length)
+        diffed = differ(diffed, diffing, node);
+      else if(diffed !== EMPTY) {
+        const range = document.createRange();
+        range.setStartBefore(diffed[0]);
+        range.setEndAfter(diffed[diffed.length - 1]);
+        range.deleteContents();
+        keys.clear();
+        diffed = EMPTY;
+        findIndex = true;
+      }
+    })(token);
+  };
+
+  const handleComponent = (c, i) => function (token) {
+    let diffed = EMPTY, view = defaultView;
+    const node = reachChild(c, this);
+    (this.updates[i] = token => {
+      view = getComponentView(view, reachToken(c, token));
+      diffed = differ(diffed, view.$, node);
+    })(token);
+  };
+
+  const handleContent = (c, i) => function (token) {
+    const node = reachChild(c, this);
+    (this.updates[i] = token => {
+      setData(node, reachToken(c, token).value);
+    })(token);
+  };
+
+  const handleSignal = (c, i) => function (token) {
+    let dispose = noop, signal, fx;
+    const node = reachChild(c, this);
+    const {value} = reachToken(c, token);
+    const update = value => {
+      if (signal !== value) {
+        dispose();
+        signal = value;
+        dispose = effect(fx);
+      }
+    };
+    if (isToken(getPeek(value))) {
+      let diffed = EMPTY, view = defaultView;
+      fx = () => {
+        const token = getValue(signal);
+        view = getView(view, token, false);
+        diffed = differ(diffed, view.$, node);
       };
     }
-    else {
-      const text = document.createTextNode('');
-      c.reduce(getChild, node).replaceWith(text);
-      fx(() => { text.data = this.value; }).run();
-      return Function.prototype;
+    else
+      fx = () => { setData(node, getValue(signal)); };
+    this.updates[i] = token => update(reachToken(c, token).value);
+    update(value);
+  };
+
+  const handleToken = (c, i) => function (token) {
+    let diffed = EMPTY, view = defaultView, id = null;
+    const node = reachChild(c, this);
+    (this.updates[i] = token => {
+      token = reachToken(c, token).value;
+      if (id !== token.id) {
+        id = token.id;
+        // TODO: should this effect instead?
+        view = getView(view, token, false);
+        diffed = differ(diffed, view.$, node);
+      }
+      else if (token.type === COMPONENT)
+        view.update(invoke(token));
+      else
+        view.update(token);
+    })(token);
+  };
+
+  const addChildren = ({children}, updates, content, c, svg) => {
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      switch (child.type) {
+        case STATIC:
+          content.appendChild(text(child.value));
+          break;
+        default:
+          content.appendChild(
+            mapToken(children[i], updates, [], c.concat(i), svg)
+          );
+          break;
+      }
     }
   };
-}
 
-const key = ({name}) => name === 'key';
-function asArray(token, i) {
-  const {value} = token.attributes.find(key) || {value: i};
-  let info = this.get(value);
-  if (!info) {
-    const [updates, content] = parse(token);
-    switch (token.type) {
-      case ELEMENT:
-        info = [token, {updates, content}, [content]];
-        break;
-      // TODO: components returning components and components
-      //       with a conditional return are not supported as Array
+  const mapToken = (token, updates, a, c, svg) => {
+    let callback, content;
+    const {length} = updates;
+    type: switch (token.type) {
+      case INTERPOLATION: {
+        const {value} = token;
+        switch (true) {
+          case isToken(value):
+            callback = handleToken;
+            break;
+          case isArray(value):
+            callback = handleArray;
+            break;
+          case isSignal(value):
+            callback = handleSignal;
+            break;
+          default: {
+            content = text('');
+            updates.push(handleContent(c, length));
+            break type;
+          }
+        }
+      }
       case COMPONENT: {
-        const result = token.value(token.properties, ...token.children);
-        const [updates, content] = parse(result);
-        const isFragment = result.type === FRAGMENT;
-        const ctx = isFragment ? asChildNodes(content) : content;
-        info = [result, {updates, content: ctx}, isFragment ? ctx.childNodes : [content]];
+        content = text('');
+        updates.push((callback || handleComponent)(c, length));
         break;
       }
-      case FRAGMENT:
-        const ctx = asChildNodes(content);
-        info = [token, {updates, content: ctx}, ctx.childNodes];
+      case ELEMENT: {
+        const {attributes, name} = token;
+        const args = [name];
+        const attrs = [];
+        for (let i = 0; i < attributes.length; i++) {
+          const entry = attributes[i];
+          if (entry.type === INTERPOLATION || entry.dynamic) {
+            if (!isKey(entry))
+              a.push(i);
+          }
+          else {
+            if (entry.name === 'is')
+              args.push({is: entry.value});
+            attrs.push(entry);
+          }
+        }
+        if (a.length)
+          updates.push(handleAttributes(a, c, length));
+        content = svg || (svg = name === 'svg') ?
+          document.createElementNS('http://www.w3.org/2000/svg', ...args) :
+          document.createElement(...args);
+        for (const {name, value} of attrs)
+          setAttribute(content, name, value, true);
+        addChildren(token, updates, content, c, svg);
         break;
+      }
+      case FRAGMENT: {
+        content = document.createDocumentFragment();
+        addChildren(token, updates, content, c, svg);
+        break;
+      }
     }
-    this.set(value, info);
-  }
-  return info;
-}
+    return content;
+  };
 
-export { Effect, FX, Signal, batch, computed, diff, effect, render, signal, useDocument, useProperty };
+  /**
+   * Reveal some `token` content into a `DOM` element.
+   * @param {() => Token | Token} what the token to render
+   * @param {Element} where the DOM node to render such token
+   */
+  return (what, where) => {
+    /** @type {Token} */
+    const token = typeof what === 'function' ? what() : what;
+    if (!isToken) isToken = isPrototypeOf.bind(getPrototypeOf(token));
+    const view = getView(views.get(where) || defaultView, token, true);
+    views.set(where, view);
+    where.replaceChildren(...view.$);
+  };
+};
+
+export { index as default };

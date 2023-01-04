@@ -1,14 +1,9 @@
-/** @jsx C *//** @jsxFrag F *//** @jsxInterpolation I */
-
-import {
-  render,
-  signal,
-  createElement as C,
-  Fragment as F,
-  interpolation as I
-} from '../es.js';
+import createRender from '../index.js';
+import {Signal, signal, effect} from 'https://unpkg.com/@webreflection/signal';
+const render = createRender({Signal, effect});
 
 function Counter({signal}) {
+  console.log('Counter');
   return (
     <div>
       <button onclick={() => { signal.value--; }}>-</button>
@@ -19,6 +14,7 @@ function Counter({signal}) {
 }
 
 const Counters = ({many}) => {
+  console.log('Counters');
   const data = [];
   for (let i = 0; i < many; i++)
     data[i] = <Counter signal={signal(0)} />;

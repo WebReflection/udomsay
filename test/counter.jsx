@@ -1,13 +1,11 @@
-/** @jsx C *//** @jsxFrag F *//** @jsxInterpolation I */
+// grab signals from various libaries, here the simplest I know
+import {Signal, signal, effect} from 'https://unpkg.com/@webreflection/signal';
 
-import {
-  render,
-  signal,
-  createElement as C,
-  Fragment as F,
-  interpolation as I
-} from '../index.js';
+// import the `createRender` utility
+import createRender from 'https://unpkg.com/udomsay';
+const render = createRender({Signal, effect});
 
+// Counter Cmponent example
 function Counter({clicks}) {
   return (
     <div>
@@ -18,9 +16,7 @@ function Counter({clicks}) {
   );
 }
 
-const comp = <Counter clicks={signal(0)} />;
-const {body} = document;
-
-render(comp, body);
-
-setTimeout(render, 2000, comp, body);
+render(
+  <Counter clicks={signal(0)} />,
+  document.body
+);

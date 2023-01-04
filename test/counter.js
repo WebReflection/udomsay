@@ -1,29 +1,24 @@
-var _token = {},
-  _token2 = {};
-/** @jsx C */ /** @jsxFrag F */ /** @jsxInterpolation I */
+var _templateReference = {},
+  _templateReference2 = {};
+globalThis.ESXToken || (globalThis.ESXToken = class ESXToken { static ATTRIBUTE = 1; static COMPONENT = 2; static ELEMENT = 3; static FRAGMENT = 4; static INTERPOLATION = 5; static STATIC = 6; static _ = Object.freeze([]); static a = (dynamic, name, value) => ({ type: 1, dynamic, name, value }); static b = (type, value) => ({ type, value }); constructor(id, type, attributes, children, name, value) { this.id = id; this.type = type; this.attributes = attributes; this.children = children; this.name = name; this.value = value; } get properties() { const { attributes } = this; if (attributes.length) { const properties = {}; for (const entry of attributes) { if (entry.type < 2) properties[entry.name] = entry.value;else Object.assign(properties, entry.value); } return properties; } return null; } });
+// grab signals from various libaries, here the simplest I know
+import { Signal, signal, effect } from 'https://unpkg.com/@webreflection/signal';
 
-import { render, signal, createElement as C, Fragment as F, interpolation as I } from '../index.js';
+// import the `createRender` utility
+import createRender from 'https://unpkg.com/udomsay';
+const render = createRender({
+  Signal,
+  effect
+});
+
+// Counter Cmponent example
 function Counter({
   clicks
 }) {
-  return C("div", {
-    __token: _token
-  }, C("button", {
-    onclick: I(() => {
-      clicks.value--;
-    })
-  }, "-"), C("span", null, I(clicks)), C("button", {
-    onclick: I(() => {
-      clicks.value++;
-    })
-  }, "+"));
+  return new ESXToken(_templateReference, 3, ESXToken._, [new ESXToken(null, 3, [ESXToken.a(true, "onclick", () => {
+    clicks.value--;
+  })], [ESXToken.b(6, "-")], "button", "button"), new ESXToken(null, 3, ESXToken._, [ESXToken.b(5, clicks)], "span", "span"), new ESXToken(null, 3, [ESXToken.a(true, "onclick", () => {
+    clicks.value++;
+  })], [ESXToken.b(6, "+")], "button", "button")], "div", "div");
 }
-const comp = C(Counter, {
-  __token: _token2,
-  clicks: I(signal(0))
-});
-const {
-  body
-} = document;
-render(comp, body);
-setTimeout(render, 2000, comp, body);
+render(new ESXToken(_templateReference2, 2, [ESXToken.a(true, "clicks", signal(0))], ESXToken._, "Counter", Counter), document.body);
