@@ -49,6 +49,8 @@
   "unpkg": "es.js",
   "dependencies": {
     "@ungap/esx": "^0.2.2",
+    "@webreflection/empty": "^0.2.1",
+    "@webreflection/signal": "^0.3.0",
     "domconstants": "^1.0.0",
     "usignal": "^0.8.9"
   },

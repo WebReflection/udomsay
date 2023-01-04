@@ -1,27 +1,14 @@
-/** @jsx C */
-/** @jsxFrag F */
-/** @jsxInterpolation I */
-
 // import './esm/document.js';
-import {signal, createElement as C, Fragment as F, interpolation as I, render} from '../index.js';
+import createRender from '../index.js';
+import {Signal, signal, effect} from 'https://unpkg.com/@webreflection/signal';
 
 const A = signal('A');
 const B = signal('B');
-const props = {ok: 1};
+const C = signal('C');
 
-const div = () => (
+const div = (A, B) => (
   <div test={A} static="value">
-    {
-      Math.random() < .5 ?
-      [
-        <p>first</p>,
-        <p>second</p>
-      ] :
-      [
-        <p>third</p>,
-        <p>fourth</p>
-      ]
-    }
+    {B}
   </div>
 );
 
@@ -29,6 +16,12 @@ function Component({test}) {
   return <><p test={test}>OK {test}</p></>;
 }
 
-render(div, document.body);
+const render = createRender({document, Signal, effect});
+render(div(A, B), document.body.appendChild(document.createElement('div')));
+render(div(A, C), document.body.appendChild(document.createElement('div')));
 
-setInterval(render, 1000, div, document.body);
+setTimeout(() => A.value = 'B', 2000);
+setTimeout(() => B.value = 'C', 2000);
+setTimeout(() => B.value = 'D', 4000);
+
+// setInterval(render, 1000, div, document.body);

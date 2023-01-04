@@ -1,41 +1,27 @@
-var _token = {},
-  _token2 = {},
-  _token3 = {},
-  _token4 = {},
-  _token5 = {},
-  _token6 = {};
-/** @jsx C */
-/** @jsxFrag F */
-/** @jsxInterpolation I */
-
+var _templateReference = {},
+  _templateReference2 = {};
+globalThis.ESXToken || (globalThis.ESXToken = class ESXToken { static ATTRIBUTE = 1; static COMPONENT = 2; static ELEMENT = 3; static FRAGMENT = 4; static INTERPOLATION = 5; static STATIC = 6; static _ = Object.freeze([]); static a = (dynamic, name, value) => ({ type: 1, dynamic, name, value }); static b = (type, value) => ({ type, value }); constructor(id, type, attributes, children, name, value) { this.id = id; this.type = type; this.attributes = attributes; this.children = children; this.name = name; this.value = value; } get properties() { const { attributes } = this; if (attributes.length) { const properties = {}; for (const entry of attributes) { if (entry.type < 2) properties[entry.name] = entry.value;else Object.assign(properties, entry.value); } return properties; } return null; } });
 // import './esm/document.js';
-import { signal, createElement as C, Fragment as F, interpolation as I, render } from '../index.js';
+import createRender from '../index.js';
+import { Signal, signal, effect } from 'https://unpkg.com/@webreflection/signal';
 const A = signal('A');
 const B = signal('B');
-const props = {
-  ok: 1
-};
-const div = () => C("div", {
-  __token: _token,
-  test: I(A),
-  static: "value"
-}, I(Math.random() < .5 ? [C("p", {
-  __token: _token2
-}, "first"), C("p", {
-  __token: _token3
-}, "second")] : [C("p", {
-  __token: _token4
-}, "third"), C("p", {
-  __token: _token5
-}, "fourth")]));
+const C = signal('C');
+const div = (A, B) => new ESXToken(_templateReference, 3, [ESXToken.a(true, "test", A), ESXToken.a(false, "static", "value")], [ESXToken.b(5, B)], "div", "div");
 function Component({
   test
 }) {
-  return C(F, {
-    __token: _token6
-  }, C("p", {
-    test: I(test)
-  }, "OK ", I(test)));
+  return new ESXToken(_templateReference2, 4, ESXToken._, [new ESXToken(null, 3, [ESXToken.a(true, "test", test)], [ESXToken.b(6, "OK "), ESXToken.b(5, test)], "p", "p")]);
 }
-render(div, document.body);
-setInterval(render, 1000, div, document.body);
+const render = createRender({
+  document,
+  Signal,
+  effect
+});
+render(div(A, B), document.body.appendChild(document.createElement('div')));
+render(div(A, C), document.body.appendChild(document.createElement('div')));
+setTimeout(() => A.value = 'B', 2000);
+setTimeout(() => B.value = 'C', 2000);
+setTimeout(() => B.value = 'D', 4000);
+
+// setInterval(render, 1000, div, document.body);
