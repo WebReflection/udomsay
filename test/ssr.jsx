@@ -1,5 +1,5 @@
 import createRender from '../esm/ssr.js';
-import {Signal} from '@webreflection/signal';
+import {Signal, signal} from '@webreflection/signal';
 const render = createRender({Signal});
 
 function Counter({clicks}) {
@@ -20,7 +20,9 @@ function test() {
     (
       <html lang="en">
         <body>
-          {counters.map((_, i) => <li><Counter clicks={signal(i)} /></li>)}
+          <ul>
+            {counters.map((_, i) => <li><Counter clicks={signal(i)} /></li>)}
+          </ul>
         </body>
       </html>
     ),
