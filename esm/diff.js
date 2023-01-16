@@ -1,6 +1,7 @@
 /* (c) Andrea Giammarchi - ISC */
 // @see https://github.com/WebReflection/udomdiff
-export const diff = (parentNode, a, b, before) => {
+export const diff = (a, b, before) => {
+  const {parentNode} = before;
   const bLength = b.length;
   let aEnd = a.length;
   let bEnd = bLength;

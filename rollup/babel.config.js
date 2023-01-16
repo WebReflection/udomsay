@@ -1,7 +1,7 @@
 import {nodeResolve} from '@rollup/plugin-node-resolve';
 
 export default {
-  input: './esm/esx.js',
+  input: './esm/index.js',
   plugins: [
     nodeResolve()
   ],

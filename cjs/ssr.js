@@ -2,184 +2,220 @@
 /*! (c) Andrea Giammarchi - ISC */
 
 const {VOID_ELEMENTS} = require('domconstants');
-
-const {
-  COMPONENT,
-  FRAGMENT,
-  NODE,
-  OBJECT
-} = require('./constants.js');
-
-const {Interpolation, Signal} = require('./classes.js');
-
 const {escape} = require('./html-escaper.js');
 
-const {entries, isArray} = require('./pure-utils.js');
+const EMPTY = (m => /* c8 ignore start */ m.__esModule ? m.default : m /* c8 ignore stop */)(require('@webreflection/empty/array'));
+const noop = (m => /* c8 ignore start */ m.__esModule ? m.default : m /* c8 ignore stop */)(require('@webreflection/empty/function'));
 
-(m => Object.keys(m).map(k => k !== 'default' && (exports[k] = m[k])))
-(require('usignal'));
-(m => Object.keys(m).map(k => k !== 'default' && (exports[k] = m[k])))
-(require('./udomsay.js'));
+const createRender = (m => /* c8 ignore start */ m.__esModule ? m.default : m /* c8 ignore stop */)(require('./index.js'));
 
-// TODO: how can tokens help here?
-//  * create once an html array related to each token
-//  * crete details to map in future calls so that each hole (empty string)
-//    can be populated with the new props value instead of parsing each time
-//    over and over every prop per template (although repeated renders are very fast)
-//  * store per token html array to "clone" and a list of ops to perform next time
-//    same way template and details work now on the web
-//  * each time a token is known, it can skip HTML parsing/creation and update only
-//    indexes that could've been mutated by receiving new data or conditional holes
-//  * profit?
-
-const render = (what, where) => {
-  const {type, args} = typeof what === COMPONENT ? what() : what;
-  const notStreaming = typeof where === COMPONENT;
-  const info = new Info(type, notStreaming ? [] : new Stream(where)).parse(args);
-  if (notStreaming) {
-    let html = info.html.join('');
-    if (/^(<html>|<html\s[^>]+?>)/.test(html))
-      html = '<!doctype html>' + html;
-    where(html);
+const cloneNode = (current, newNode) => {
+  for (const node of current) {
+    switch (node.nodeType) {
+      case 1:
+        const element = new Element(node.name);
+        for (const {name, value} of node.attributes)
+          element.attributes.push({name, value});
+        cloneNode(node, element);
+        newNode.appendChild(element);
+        break;
+      case 3:
+        newNode.appendChild(new Text(node.data));
+        break;
+      case 11:
+        for (const inner of node)
+          cloneNode(inner, newNode);
+        break;
+    }
   }
+  return newNode;
 };
-exports.render = render;
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-class Stream {
-  constructor(where) {
-    this.where = where;
+class Text {
+  constructor(data) {
+    this.nodeType = 3;
+    this.parentNode = null;
+    this.data = data;
   }
-  push(chunk) {
-    this.where.write(chunk);
+  remove() {
+    Element.prototype.remove.call(this);
+  }
+  toString() {
+    return escape(this.data);
   }
 }
 
-class Info {
-  constructor(type, html) {
-    this.fragment = type === FRAGMENT;
-    this.type = type;
-    this.html = html;
-  }
-  next(type) {
-    return new Info(type, this.html);
-  }
-  parse(args) {
-    createDetails.apply(this, args);
+class Node extends Array {
+  get childNodes() {
     return this;
   }
-  pushChild(value) {
-    if (value instanceof Interpolation)
-        value = value.value;
-    if (typeof value === OBJECT) {
-      if (isArray(value)) {
-        for (const entry of value)
-          this.pushChild(entry);
-      }
-      else {
-        const isSignal = value instanceof Signal;
-        if (isSignal)
-          value = value.peek();
-        if (isSignal && (typeof value !== OBJECT))
-          this.html.push(escape(value));
-        else {
-          const {type, args} = value;
-          this.next(type).parse(args);
-        }
-      }
+  appendChild(node) {
+    switch (node.nodeType) {
+      case 1:
+      case 3:
+        node.parentNode = this;
+        this.push(node);
+        break;
+      case 11:
+        for (const inner of node)
+          this.appendChild(inner);
+        break;
     }
-    else
-      this.html.push(escape(value));
+    return node;
   }
-  pushProp(key, value) {
-    switch (typeof value) {
-      case 'function':
-      case 'undefined':
-        break;
-      case 'object':
-        if (!value)
-          break;
-        if (value instanceof Interpolation) {
-          this.pushProp(key, value.value);
-          break;
-        }
-        if (value instanceof Signal) {
-          this.pushProp(key, value.peek());
-          break;
-        }
-      case 'boolean':
-        if (value === true)
-          this.html.push(` ${key}`);
-        break;
-      default:
-        this.html.push(` ${key === 'className' ? 'class' : key}="${escape(value)}"`);
-        break;
-    }
+  replaceChild(newChild, oldChild) {
+    this[this.indexOf(oldChild)] = newChild;
+    newChild.parentNode = this;
+    return oldChild;
   }
 }
 
-function createDetails(entry, props, ...children) {
-  const {type, html} = this;
-  const {length} = arguments;
-  switch (type) {
-    case NODE:
-      html.push(`<${entry}`);
-      let textContent = '';
-      if (props) {
-        if (props instanceof Interpolation)
-          props = props.value;
-        for (let [key, value] of entries(props)) {
-          switch (key) {
-            case '__token':
-            case 'key':
-            case 'ref':
-              break;
-            case 'textContent':
-              if (value instanceof Interpolation)
-                value = value.value;
-              if (value instanceof Signal)
-                value = value.peek();
-              textContent = value;
-              break;
-            default:
-              this.pushProp(key, value);
-              break;
-          }
-        }
-      }
-      if (length === 2 && textContent === '')
-        html.push(VOID_ELEMENTS.test(entry) ? ' />' : `></${entry}>`);
-      else {
-        html.push('>');
-        if (textContent === '')
-          for (let i = 2; i < length; i++)
-            this.pushChild(arguments[i]);
-        else
-          html.push(escape(textContent));
-        html.push(`</${entry}>`);
-      }
-      break;
-    case COMPONENT: {
-      if (props) {
-        if (props instanceof Interpolation)
-          props = props.value;
-        else {
-          for (const [key, value] of entries(props)) {
-            if (value instanceof Interpolation)
-              props[key] = value.value;
-          }
-        }
-      }
-      const {type, args} = entry(props, ...children);
-      this.next(type).parse(args);
-      break;
-    }
-    case FRAGMENT:
-      for (let i = 2; i < length; i++)
-        this.pushChild(arguments[i]);
-      break;
-    default:
-      throw new Error(entry);
+class Fragment extends Node {
+  constructor() {
+    super();
+    this.nodeType = 11;
+    this.parentNode = null;
+  }
+  cloneNode() {
+    return cloneNode(this, new Fragment);
+  }
+  toString() {
+    return this.join('');
   }
 }
+
+class Element extends Node {
+  constructor(name) {
+    super();
+    this.nodeType = 1;
+    this.name = name;
+    this.attributes = EMPTY;
+  }
+  set className(value) {
+    this.setAttribute('class', value);
+  }
+  set textContent(value) {
+    for (const node of this.splice(0))
+      node.parentNode = null;
+    this.appendChild(new Text(value));
+  }
+  cloneNode() {
+    return cloneNode(this, new Element(this.name));
+  }
+  remove() {
+    const {parentNode} = this;
+    if (parentNode) {
+      this.parentNode = null;
+      parentNode.splice(parentNode.indexOf(this), 1);
+    }
+  }
+  removeAttribute() {}
+  setAttribute(name, value) {
+    if (this.attributes === EMPTY)
+      this.attributes = [];
+    this.attributes.push({name, value});
+  }
+  toString() {
+    const {length, name, attributes} = this;
+    const html = ['<', name];
+    for (const {name, value} of attributes) {
+      if (typeof value === 'boolean') {
+        if (value)
+          html.push(` ${name}`);
+      }
+      else if (value != null)
+        html.push(` ${name}="${escape(value)}"`);
+    }
+    if (!length && VOID_ELEMENTS.test(name))
+      html.push(' />');
+    else
+      html.push('>', ...this, `</${name}>`);
+    return html.join('');
+  }
+}
+
+class Range {
+  constructor() {
+    this.before = null;
+    this.after = null;
+  }
+  setStartBefore(node) {
+    this.before = node;
+  }
+  setEndAfter(node) {
+    this.after = node;
+  }
+  deleteContents() {
+    const {parentNode} = this.before;
+    const i = parentNode.indexOf(this.before);
+    for (const node of parentNode.splice(i,  parentNode.indexOf(this.after) - i + 1))
+      node.parentNode = null;
+  }
+}
+
+const document = {
+  createTextNode: data => new Text(data),
+  createDocumentFragment: () => new Fragment,
+  createElementNS: name => new Element(name),
+  createElement: (name, options) => {
+    const element = new Element(name);
+    if (options && options.is)
+      element.setAttribute('is', options.is);
+    return element;
+  },
+  createRange: () => new Range
+};
+
+const diff = (_, nodes, before) => {
+  const {parentNode} = before;
+  const i = parentNode.indexOf(before);
+  for (const node of nodes)
+    node.parentNode = parentNode;
+  parentNode.splice(i, 0, ...nodes);
+};
+
+/**
+ * @typedef {Object} RenderOptions utilities to use while rendering.
+ * @prop {Document} [document] the default document to use. By default it's the global one.
+ * @prop {[string, (node:Element, current:any, previous:any) => void][]} [plugins] a list of plugins to deal with,
+ *  used with attributes, example: `["stuff", (node, curr, prev) => { ... }]`
+ * @prop {(fn:function) => function} [effect] an utility to create effects on components.
+ *  It must return a dispose utility to drop previous effect.
+ * @prop {(s:any) => any} [getPeek] an utility to retrieve a Signal value without side-effects.
+ * @prop {(s:any) => any} [getValue] an utility to retrieve a Signal value.
+ * @prop {(s:any) => boolean} [isSignal] an utility to know if a value is a Signal.
+ * @prop {function} [Signal] an optional signal constructor used to trap-check.
+ *  `isSignal(ref)` utility whenever the `isSignal` field has not been provided.
+ */
+
+/**
+ * Return a `render(what, where)` utility able to deal with provided options.
+ * @param {RenderOptions} options
+ */
+module.exports = (options = {}) => {
+  const getPeek = options.getPeek || (s => s.peek());
+  const render = createRender({
+    document, diff, getPeek,
+    plugins: options.plugins || EMPTY,
+    effect: (fn => (fn(), noop)),
+    getValue: getPeek,
+    isSignal: options.isSignal,
+    Signal: options.Signal
+  });
+  return (what, where) => {
+    render(what, {
+      replaceChildren(...nodes) {
+        if (typeof where === 'function') {
+          let html = nodes.join('');
+          if (/^(<html>|<html\s[^>]+?>)/.test(html))
+            html = '<!doctype html>' + html;
+          where(html);
+        }
+        else {
+          for (const node of nodes)
+            where.write(node.toString());
+        }
+      }
+    });
+  };
+};

@@ -5,6 +5,7 @@
   "main": "./cjs/index.js",
   "scripts": {
     "build": "npm run cjs && npm run rollup:es && npm run rollup:babel && npm run size",
+    "build:array": "babel test/array.jsx -o test/array.js",
     "build:counter": "babel test/counter.jsx -o test/counter.js",
     "build:index": "babel test/index.jsx -o test/index.js",
     "build:ssr": "babel test/ssr.jsx -o test/ssr.js",
@@ -24,14 +25,16 @@
   "author": "Andrea Giammarchi",
   "license": "ISC",
   "devDependencies": {
-    "@babel/cli": "^7.19.3",
-    "@babel/core": "^7.20.5",
+    "@babel/cli": "^7.20.7",
+    "@babel/core": "^7.20.12",
     "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-terser": "^0.3.0",
     "@ungap/babel-plugin-transform-esx": "^0.4.3",
-    "@ungap/babel-plugin-transform-hinted-jsx": "^0.1.0",
+    "@webreflection/signal": "^0.3.0",
     "ascjs": "^5.0.1",
     "c8": "^7.12.0",
-    "rollup-plugin-terser": "^7.0.2"
+    "rollup": "^3.10.0",
+    "usignal": "^0.8.9"
   },
   "module": "./esm/esx.js",
   "type": "module",
@@ -48,9 +51,9 @@
   },
   "unpkg": "es.js",
   "dependencies": {
-    "@ungap/esx": "^0.2.2",
-    "domconstants": "^1.0.0",
-    "usignal": "^0.8.9"
+    "@ungap/esx": "^0.3.0",
+    "@webreflection/empty": "^0.2.1",
+    "domconstants": "^1.0.0"
   },
   "repository": {
     "type": "git",
