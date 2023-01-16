@@ -3,6 +3,7 @@
 .eslintrc.json
 .travis.yml
 .github
+babel.config.json
 coverage/
 node_modules/
 rollup/
