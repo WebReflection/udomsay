@@ -51,9 +51,9 @@ The result can be **[tested in CodePen.io](https://codepen.io/WebReflection/pen/
 
 Bringing in your favorite signals libraries is almost a no brainer with *udomsay*: check the fews already tested within this project!
 
-  * **[preact](https://www.npmjs.com/package/@preact/signals-core)**, implemented through [this file](./esm/dist/preact.js) and [live tested here](https://webreflection.github.io/udomsay/test/dist/preact.html)
-  * **[@webreflection/signal](https://www.npmjs.com/package/@webreflection/signal)**, implemented through [this file](./esm/dist/signal.js) and [live tested here](https://webreflection.github.io/udomsay/test/dist/signal.html)
-  * **[solid-js](https://www.npmjs.com/package/solid-js)**, implemented through [this file](./esm/dist/solid.js) and [live tested here](https://webreflection.github.io/udomsay/test/dist/solid.html)
+  * **[preact](https://www.npmjs.com/package/@preact/signals-core)**, implemented through [this file](./esm/dist/preact.js) and [live tested here](https://webreflection.github.io/udomsay/test/dist/preact.html). Try `import {createRender, signal} from "udomsay/preact"` yourself!
+  * **[@webreflection/signal](https://www.npmjs.com/package/@webreflection/signal)**, implemented through [this file](./esm/dist/signal.js) and [live tested here](https://webreflection.github.io/udomsay/test/dist/signal.html). Try `import {createRender, signal} from "udomsay/signal"` yourself!
+  * **[solid-js](https://www.npmjs.com/package/solid-js)**, implemented through [this file](./esm/dist/solid.js) and [live tested here](https://webreflection.github.io/udomsay/test/dist/solid.html). Try `import {createRender, createSignal} from "udomsay/solid"` yourself!
 
 ### Current udomsay ESX Interpolations Rules
 
