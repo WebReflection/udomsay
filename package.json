@@ -4,17 +4,24 @@
   "description": "A stricter, signals driven, ESX based library",
   "main": "./cjs/index.js",
   "scripts": {
-    "build": "npm run cjs && npm run rollup:es && npm run rollup:babel && npm run size",
+    "build": "npm run cjs && npm run rollup:es && npm run rollup:babel && npm run build:dist && npm run size && npm run build:size",
     "build:array": "babel test/array.jsx -o test/array.js",
+    "build:dist": "for lib in 'preact' 'signal' 'solid' 'usignal'; do npm run rollup:$lib; done; npm run build:dist:test",
+    "build:dist:test": "for lib in 'preact' 'signal' 'solid' 'usignal'; do echo \"<!DOCTYPE html><html lang='en'><head><meta name='viewport' content='width=device-width,initial-scale=1.0'><title>$lib</title><script type='module' src='./$lib.js'></script></head></html>\" > test/dist/$lib.html && babel test/dist/$lib.jsx -o test/dist/$lib.js; done",
     "build:counter": "babel test/counter.jsx -o test/counter.js",
     "build:index": "babel test/index.jsx -o test/index.js",
+    "build:size": "for lib in 'preact' 'signal' 'solid' 'usignal'; do echo -e \"\\x1b[1m$lib\\x1b[0m: $(cat $lib.js | brotli | wc -c)\"; done",
     "build:ssr": "babel test/ssr.jsx -o test/ssr.js",
     "build:esx": "babel test/esx.jsx -o test/esx-babel.js",
     "cjs": "ascjs --no-default esm cjs",
     "rollup:es": "rollup --config rollup/es.config.js",
     "rollup:babel": "rollup --config rollup/babel.config.js",
+    "rollup:preact": "rollup --config rollup/preact.config.js",
+    "rollup:signal": "rollup --config rollup/signal.config.js",
+    "rollup:solid": "rollup --config rollup/solid.config.js",
+    "rollup:usignal": "rollup --config rollup/usignal.config.js",
     "coveralls": "c8 report --reporter=text-lcov | coveralls",
-    "size": "cat es.js | brotli | wc -c",
+    "size": "echo -e \"\\x1b[1mudomsay\\x1b[0m: $(cat es.js | brotli | wc -c)\"",
     "test": "c8 node test/index.js"
   },
   "keywords": [
@@ -28,6 +35,7 @@
   "devDependencies": {
     "@babel/cli": "^7.20.7",
     "@babel/core": "^7.20.12",
+    "@preact/signals-core": "^1.2.3",
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-terser": "^0.3.0",
     "@ungap/babel-plugin-transform-esx": "^0.4.3",
@@ -35,6 +43,7 @@
     "ascjs": "^5.0.1",
     "c8": "^7.12.0",
     "rollup": "^3.10.0",
+    "solid-js": "^1.6.9",
     "usignal": "^0.8.9"
   },
   "module": "./esm/esx.js",
@@ -43,6 +52,18 @@
     ".": {
       "import": "./esm/esx.js",
       "default": "./cjs/esx.js"
+    },
+    "./preact": {
+      "import": "./preact.js"
+    },
+    "./signal": {
+      "import": "./signal.js"
+    },
+    "./solid": {
+      "import": "./solid.js"
+    },
+    "./usignal": {
+      "import": "./usignal.js"
     },
     "./ssr": {
       "import": "./esm/ssr.js",
