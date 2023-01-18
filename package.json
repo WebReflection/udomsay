@@ -46,12 +46,12 @@
     "solid-js": "^1.6.9",
     "usignal": "^0.8.9"
   },
-  "module": "./esm/esx.js",
+  "module": "./esm/index.js",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./esm/esx.js",
-      "default": "./cjs/esx.js"
+      "import": "./esm/index.js",
+      "default": "./cjs/index.js"
     },
     "./preact": {
       "import": "./preact.js"
