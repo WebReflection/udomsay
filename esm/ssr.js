@@ -36,6 +36,14 @@ class Text {
     this.parentNode = null;
     this.data = data;
   }
+  replaceWith(node) {
+    const {parentNode} = this;
+    parentNode.splice(
+      parentNode.indexOf(this),
+      1,
+      node
+    );
+  }
   remove() {
     Element.prototype.remove.call(this);
   }
@@ -154,6 +162,7 @@ class Range {
 
 const document = {
   createTextNode: data => new Text(data),
+  createComment: () => new Text(''),
   createDocumentFragment: () => new Fragment,
   createElementNS: name => new Element(name),
   createElement: (name, options) => {

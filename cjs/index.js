@@ -18,6 +18,8 @@ const {
   STATIC
 } = Token;
 
+const UDOMSAY = '🙊';
+
 // generic utils
 const asChildNodes = ({childNodes}) => ({childNodes: [...childNodes]});
 const getChild = ({childNodes}, i) => childNodes[i];
@@ -66,6 +68,7 @@ module.exports = (options = {}) => {
   );
 
   const text = value => document.createTextNode(value);
+  const comment = () => document.createComment(UDOMSAY);
 
   const getComponentView = (view, component) => {
     view.dispose();
@@ -143,7 +146,7 @@ module.exports = (options = {}) => {
 
   const asAttribute = (node, key, value, prev, set) => {
     if (isSignal(value)) {
-      const dispose = '🙊' + key;
+      const dispose = UDOMSAY + key;
       if (dispose in prev)
         prev[dispose]();
       prev[dispose] = effect(() => {
@@ -269,8 +272,11 @@ module.exports = (options = {}) => {
         diffed = differ(diffed, view.$, node);
       };
     }
-    else
-      fx = () => { setData(node, getValue(signal)) };
+    else {
+      const t = text('');
+      node.replaceWith(t);
+      fx = () => { setData(t, getValue(signal)) };
+    }
     this.updates[i] = token => update(reachToken(c, token).value);
     update(value);
   };
@@ -333,7 +339,7 @@ module.exports = (options = {}) => {
         }
       }
       case COMPONENT: {
-        content = text('');
+        content = comment();
         updates.push((callback || handleComponent)(c, length));
         break;
       }
