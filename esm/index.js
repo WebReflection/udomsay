@@ -200,7 +200,6 @@ export default (options = {}) => {
     let diffed = EMPTY, findIndex = true, index = -1;
     const node = reachChild(c, this);
     const keys = new Map;
-    debugger;
     (this.updates[i] = token => {
       const {value} = reachToken(c, token);
       const diffing = [];
