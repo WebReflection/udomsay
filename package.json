@@ -13,6 +13,7 @@
     "build:size": "for lib in 'preact' 'signal' 'solid' 'usignal'; do echo -e \"\\x1b[1m$lib\\x1b[0m: $(cat $lib.js | brotli | wc -c)\"; done",
     "build:ssr": "babel test/ssr.jsx -o test/ssr.js",
     "build:esx": "babel test/esx.jsx -o test/esx-babel.js",
+    "build:uhooks": "babel test/uhooks.jsx -o test/uhooks.js",
     "cjs": "ascjs --no-default esm cjs",
     "rollup:es": "rollup --config rollup/es.config.js",
     "rollup:babel": "rollup --config rollup/babel.config.js",
