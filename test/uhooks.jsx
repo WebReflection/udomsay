@@ -3,15 +3,15 @@ import {hooked, useState} from 'https://unpkg.com/uhooks?module';
 const transform = token => {
   switch (token.type) {
     case ESXToken.COMPONENT: {
-      let result, id, node;
+      let id, node;
       hooked(() => {
-        result = token.value();
+        const result = token.value();
         if (id !== result.id) {
           id = result.id;
           const replace = transform(result);
           if (!node)
             node = replace;
-          else if (node !== replace) {
+          else {
             node.replaceWith(replace);
             node = replace;
           }
@@ -23,17 +23,36 @@ const transform = token => {
     case ESXToken.ELEMENT: {
       const node = document.createElement(token.name);
       node.update = ({attributes, children}) => {
-        node.onclick = attributes[0]?.value;
         node.textContent = children[0].value;
+        if (attributes.length)
+          node.onclick = attributes[0].value;
       };
       return node;
     }
   }
 };
 
-document.body.appendChild(
+const same = () => transform(<Counter />);
+
+console.time('render');
+document.body.append(
+  transform(<Counter />),
+  same(),
+  same(),
+  same(),
   transform(<Counter />)
 );
+console.timeEnd('render');
+
+if (location.search === '?auto') {
+  requestAnimationFrame(function click() {
+    const button = document.querySelector('button');
+    if (button) {
+      button.click();
+      requestAnimationFrame(click);
+    }
+  });
+}
 
 function Counter() {
   const [count, update] = useState(0);
