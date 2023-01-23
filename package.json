@@ -40,12 +40,12 @@
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-terser": "^0.3.0",
     "@ungap/babel-plugin-transform-esx": "^0.4.3",
-    "@webreflection/signal": "^0.3.0",
+    "@webreflection/signal": "^0.3.1",
     "ascjs": "^5.0.1",
     "c8": "^7.12.0",
-    "rollup": "^3.10.0",
+    "rollup": "^3.10.1",
     "solid-js": "^1.6.9",
-    "usignal": "^0.8.9"
+    "usignal": "^0.8.10"
   },
   "module": "./esm/index.js",
   "type": "module",
