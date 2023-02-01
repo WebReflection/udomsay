@@ -8,7 +8,7 @@ const {Token} = require('@ungap/esx');
 const {diff} = require('./diff.js');
 
 const {isArray} = Array;
-const {getPrototypeOf, prototype: {isPrototypeOf}} = Object;
+const {entries, getPrototypeOf, prototype: {isPrototypeOf}} = Object;
 
 const {
   COMPONENT,
@@ -194,8 +194,14 @@ module.exports = (options = {}) => {
     (this.updates[i] = token => {
       const {attributes} = reachToken(c, token);
       for (const index of a) {
-        const {name, value} = attributes[index];
-        setProperty(node, name, value, prev);
+        const entry = attributes[index];
+        const {type, value} = entry;
+        if (type < 2)
+          setProperty(node, entry.name, value, prev);
+        else {
+          for (const [name, v] of entries(value))
+            setProperty(node, name, v, prev);
+        }
       }
     })(token);
   };
