@@ -7,8 +7,9 @@ const render = createRender({Signal, effect});
 
 // Counter Cmponent example
 function Counter({clicks}) {
+  const attrs = {a: 1};
   return (
-    <div>
+    <div {...attrs}>
       <button onclick={() => { clicks.value--; }}>-</button>
       <span>{clicks}</span>
       <button onclick={() => { clicks.value++; }}>+</button>

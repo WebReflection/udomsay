@@ -5,7 +5,7 @@ globalThis.ESXToken || (globalThis.ESXToken = class ESXToken { static ATTRIBUTE 
 import { Signal, signal, effect } from 'https://unpkg.com/@webreflection/signal';
 
 // import the `createRender` utility
-import createRender from 'https://unpkg.com/udomsay';
+import createRender from '../index.js';
 const render = createRender({
   Signal,
   effect
@@ -15,7 +15,10 @@ const render = createRender({
 function Counter({
   clicks
 }) {
-  return new ESXToken(_templateReference, 3, ESXToken._, [new ESXToken(null, 3, [ESXToken.a(true, "onclick", () => {
+  const attrs = {
+    a: 1
+  };
+  return new ESXToken(_templateReference, 3, [ESXToken.b(5, attrs)], [new ESXToken(null, 3, [ESXToken.a(true, "onclick", () => {
     clicks.value--;
   })], [ESXToken.b(6, "-")], "button", "button"), new ESXToken(null, 3, ESXToken._, [ESXToken.b(5, clicks)], "span", "span"), new ESXToken(null, 3, [ESXToken.a(true, "onclick", () => {
     clicks.value++;
