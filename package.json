@@ -43,8 +43,8 @@
     "@webreflection/signal": "^1.0.1",
     "ascjs": "^5.0.1",
     "c8": "^7.12.0",
-    "rollup": "^3.10.1",
-    "solid-js": "^1.6.9",
+    "rollup": "^3.12.0",
+    "solid-js": "^1.6.10",
     "usignal": "^0.8.10"
   },
   "module": "./esm/index.js",
