@@ -8,6 +8,7 @@
     "build:array": "babel test/array.jsx -o test/array.js",
     "build:dist": "for lib in 'preact' 'signal' 'solid' 'usignal'; do npm run rollup:$lib; done; npm run build:dist:test",
     "build:dist:test": "for lib in 'preact' 'signal' 'solid' 'usignal'; do echo \"<!DOCTYPE html><html lang='en'><head><meta name='viewport' content='width=device-width,initial-scale=1.0'><title>$lib</title><script type='module' src='./$lib.js'></script></head></html>\" > test/dist/$lib.html && babel test/dist/$lib.jsx -o test/dist/$lib.js; done",
+    "build:children": "babel test/children.jsx -o test/children.js",
     "build:counter": "babel test/counter.jsx -o test/counter.js",
     "build:index": "babel test/index.jsx -o test/index.js",
     "build:size": "for lib in 'preact' 'signal' 'solid' 'usignal'; do echo -e \"\\x1b[1m$lib\\x1b[0m: $(cat $lib.js | brotli | wc -c)\"; done",
@@ -43,7 +44,7 @@
     "@webreflection/signal": "^1.0.1",
     "ascjs": "^5.0.1",
     "c8": "^7.12.0",
-    "rollup": "^3.12.0",
+    "rollup": "^3.13.0",
     "solid-js": "^1.6.10",
     "usignal": "^0.8.10"
   },

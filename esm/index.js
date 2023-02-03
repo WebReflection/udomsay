@@ -69,6 +69,11 @@ export default (options = {}) => {
   const text = value => document.createTextNode(value);
   const comment = () => document.createComment(UDOMSAY);
 
+  const getChildrenID = (node, i) => {
+    let IDs = views.get(node);
+    if (!IDs) views.set(node, IDs = {});
+    return IDs[i] || (IDs[i] = {});
+  };
   const getComponentView = (view, component) => {
     view.dispose();
     const dispose = effect(() => {
@@ -220,7 +225,7 @@ export default (options = {}) => {
         }
         const key = index < 0 ? i : token.attributes[index].value;
         let {id, view} = keys.get(key) || defaultEntry;
-        if (id !== token.id) {
+        if (id !== (token.id || (token.id = getChildrenID(node, i)))) {
           view = getView(view, token, false);
           keys.set(key, {id: token.id, view});
         }
