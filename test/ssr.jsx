@@ -20,7 +20,7 @@ function test() {
     (
       <html lang="en">
         <body>
-          <ul>
+          <ul test="attribute">
             {counters.map((_, i) => <li><Counter clicks={signal(i)} /></li>)}
           </ul>
         </body>

@@ -9,13 +9,15 @@ const noop = (m => /* c8 ignore start */ m.__esModule ? m.default : m /* c8 igno
 
 const createRender = (m => /* c8 ignore start */ m.__esModule ? m.default : m /* c8 ignore stop */)(require('./index.js'));
 
+const cloneAttribute = ({name, value}) => ({name, value});
+
 const cloneNode = (current, newNode) => {
   for (const node of current) {
     switch (node.nodeType) {
       case 1:
         const element = new Element(node.name);
-        for (const {name, value} of node.attributes)
-          element.attributes.push({name, value});
+        if (node.attributes !== EMPTY)
+          element.attributes = node.attributes.map(cloneAttribute);
         cloneNode(node, element);
         newNode.appendChild(element);
         break;
