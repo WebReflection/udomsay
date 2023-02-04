@@ -14,8 +14,7 @@ const cloneNode = (current, newNode) => {
     switch (node.nodeType) {
       case 1:
         const element = new Element(node.name);
-        for (const {name, value} of node.attributes)
-          element.attributes.push({name, value});
+        element.attributes = node.attributes;
         cloneNode(node, element);
         newNode.appendChild(element);
         break;
