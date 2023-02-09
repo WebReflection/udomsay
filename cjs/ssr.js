@@ -51,7 +51,7 @@ class Text {
     Element.prototype.remove.call(this);
   }
   toString() {
-    return TEXT_ELEMENTS.test(this.parentNode) ?
+    return TEXT_ELEMENTS.test(this.parentNode?.name) ?
             this.data : escape(this.data);
   }
 }

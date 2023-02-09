@@ -1,24 +1,21 @@
-import {createSignal as $, createEffect} from 'solid-js';
+import {createSignal as $, createEffect, untrack} from 'solid-js';
 export * from 'solid-js';
 
 import _ from '../index.js';
 
-const {defineProperty} = Object;
 const signals = new WeakSet;
-const udomsay = Symbol();
+const noop = () => {};
+
 export const createSignal = (value, ...rest) => {
   const [signal, update] = $(value, ...rest);
   signals.add(signal);
-  return [
-    defineProperty(signal, udomsay, {get: () => value}),
-    newValue => update(value = newValue)
-  ];
+  return [signal, update];
 };
 
 export const createRender = (options = {}) => _({
   ...options,
-  effect: createEffect,
-  getPeek: s => s[udomsay],
+  effect: (...args) => (createEffect(...args), noop),
+  getPeek: s => untrack(s),
   getValue: s => s(),
   isSignal: s => signals.has(s)
 });
