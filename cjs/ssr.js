@@ -1,7 +1,7 @@
 'use strict';
 /*! (c) Andrea Giammarchi - ISC */
 
-const {VOID_ELEMENTS} = require('domconstants');
+const {TEXT_ELEMENTS, VOID_ELEMENTS} = require('domconstants');
 const {escape} = require('./html-escaper.js');
 
 const EMPTY = (m => /* c8 ignore start */ m.__esModule ? m.default : m /* c8 ignore stop */)(require('@webreflection/empty/array'));
@@ -51,7 +51,8 @@ class Text {
     Element.prototype.remove.call(this);
   }
   toString() {
-    return escape(this.data);
+    return TEXT_ELEMENTS.test(this.parentNode) ?
+            this.data : escape(this.data);
   }
 }
 

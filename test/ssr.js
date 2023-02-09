@@ -19,7 +19,7 @@ function Counter({
 const counters = new Array(2).fill();
 function test() {
   console.time('render');
-  render(new ESXToken(_templateReference2, 3, [ESXToken.a(false, "lang", "en")], [new ESXToken(null, 3, ESXToken._, [new ESXToken(null, 3, [ESXToken.a(false, "test", "attribute")], [ESXToken.b(5, counters.map((_, i) => new ESXToken(_templateReference3, 3, ESXToken._, [new ESXToken(null, 2, [ESXToken.a(true, "clicks", signal(i))], ESXToken._, "Counter", Counter)], "li", "li")))], "ul", "ul")], "body", "body")], "html", "html"), console.log.bind(console));
+  render(new ESXToken(_templateReference2, 3, [ESXToken.a(false, "lang", "en")], [new ESXToken(null, 3, ESXToken._, [ESXToken.b(6, "not &scaped")], "title", "title"), new ESXToken(null, 3, ESXToken._, [new ESXToken(null, 3, [ESXToken.a(false, "test", "attribute")], [ESXToken.b(5, counters.map((_, i) => new ESXToken(_templateReference3, 3, ESXToken._, [new ESXToken(null, 2, [ESXToken.a(true, "clicks", signal(i))], ESXToken._, "Counter", Counter)], "li", "li")))], "ul", "ul")], "body", "body")], "html", "html"), console.log.bind(console));
   console.timeEnd('render');
 }
 for (let i = 0; i < 5; i++) test();

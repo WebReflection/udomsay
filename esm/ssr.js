@@ -1,6 +1,6 @@
 /*! (c) Andrea Giammarchi - ISC */
 
-import {VOID_ELEMENTS} from 'domconstants';
+import {TEXT_ELEMENTS, VOID_ELEMENTS} from 'domconstants';
 import {escape} from './html-escaper.js';
 
 import EMPTY from '@webreflection/empty/array';
@@ -50,7 +50,8 @@ class Text {
     Element.prototype.remove.call(this);
   }
   toString() {
-    return escape(this.data);
+    return TEXT_ELEMENTS.test(this.parentNode?.name) ?
+            this.data : escape(this.data);
   }
 }
 

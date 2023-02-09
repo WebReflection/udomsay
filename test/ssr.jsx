@@ -19,6 +19,7 @@ function test() {
   render(
     (
       <html lang="en">
+        <title>not &scaped</title>
         <body>
           <ul test="attribute">
             {counters.map((_, i) => <li><Counter clicks={signal(i)} /></li>)}
