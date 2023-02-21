@@ -19,7 +19,7 @@ import {Signal, signal, effect} from 'https://unpkg.com/@webreflection/signal';
 import createRender from 'https://unpkg.com/udomsay';
 const render = createRender({Signal, effect});
 
-// Counter Cmponent example
+// Counter Component example
 function Counter({clicks}) {
   return (
     <div>
